@@ -12,7 +12,7 @@
 | Pain Point |  |
 | 사용할 소프트웨어 패키지의 명칭과 핵심 기능 / 용도 |  |
 | 사용할 소프트웨어 패키지의 명칭과 URL | 링크 삽입  |
-| 팀 그라운드 룰 | GroundRules.md |
+| 팀 그라운드 룰 | [GroundRules.md](https://github.com/ReturnZZero/return0/blob/main/GroundRules.md) |
 | 최종 수정일 | 2025-09-11 |
 
 
