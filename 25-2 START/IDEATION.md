@@ -162,7 +162,7 @@ AI 추천과 위치 기반 데이터를 활용해 반려인에게 개인화된 �
  [https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=애견동반&brm=&svcType=&recmSe=N&conditionType=init&extsn=&kwrdArray=](https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=%EC%95%A0%EA%B2%AC%EB%8F%99%EB%B0%98&brm=&svcType=&recmSe=N&conditionType=init&extsn=&kwrdArray=)
 
 
-# 기획안
+# 계예진
 
 
 1. 프로젝트 주제 및 제목
