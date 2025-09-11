@@ -152,7 +152,9 @@ Flutter + Flask 구조 예시
 
 	번외) 펫-친구 프로필 기반 소셜 커뮤니티 (벤치마킹 : 틴더 / 여행 관련은 아니지만 교수님이 말씀하신 데이팅 어플이 요즘 프로젝트에 많이 나온다는게 생각나서 적었어요... 어플의 순수한 의미(반려동물 프로필 기반으로 주인들끼리 친구맺기)는 퇴색될 것 같지만...) 수익 포인트는 광고 + 프리미엄 멤버십 + 거래 수수료
 
-	그리고 공공데이터포털에 전국 반려동물 동반 가능 문화시설과 동반 여행 서비스에 대한 api도 확인했습니다 [https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=애견동반&brm=&svcType=&recmSe=N&conditionType=init&extsn=&kwrdArray=](https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=%EC%95%A0%EA%B2%AC%EB%8F%99%EB%B0%98&brm=&svcType=&recmSe=N&conditionType=init&extsn=&kwrdArray=)
+	그리고 공공데이터포털에 전국 반려동물 동반 가능 문화시설과 동반 여행 서비스에 대한 api도 확인했습니다
+ 
+ [https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=애견동반&brm=&svcType=&recmSe=N&conditionType=init&extsn=&kwrdArray=](https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=%EC%95%A0%EA%B2%AC%EB%8F%99%EB%B0%98&brm=&svcType=&recmSe=N&conditionType=init&extsn=&kwrdArray=)
 
 
 
