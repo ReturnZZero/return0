@@ -23,7 +23,7 @@
 ---
 
 ## Ⅳ. 시스템 설계 및 기술 스택
-- **프론트엔드**: Android (Kotlin/Java)  
+- **프론트엔드**: Android / IOS (Flutter)  
 - **백엔드**: Firebase, Node.js  
 - **데이터베이스**: MySQL  
 - **AI 추천 시스템**: TensorFlow/PyTorch  
