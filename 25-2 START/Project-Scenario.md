@@ -13,6 +13,6 @@
 | 사용할 소프트웨어 패키지의 명칭과 핵심 기능 / 용도 | - **생성형 AI 모델 : GPT-5** → 사용자의 선호(반려동물 크기, 활동성, 예산 등)를 기반으로 개인화된 여행지·숙소 추천 알고리즘 구현<br>- **지도 플러그인 : google_maps_flutter** → Flutter 앱 내에서 Google Maps를 표시하고, 위치 기반 탐색·경로 안내 기능 제공<br>- **지도 플러그인 : kakao_map_plugin** → Flutter 앱에서 카카오 지도 API를 활용해 한국 지역 중심의 지도 서비스 구현<br>- **Firebase** → 사용자 인증, 실시간 데이터베이스, 푸시 알림 제공<br>- **MySQL** → 사용자 정보, 반려동물 프로필, 여행지 데이터, 리뷰 데이터 관리 |
 | 사용할 소프트웨어 패키지의 명칭과 URL | - **생성형 AI 모델 :** GPT-5 (https://openai.com/)<br> - **지도 플러그인 :** google maps flutter (https://pub.dev/packages/google_maps_flutter)<br> - **지도 플러그인 :** kakao map plugin (https://pub.dev/packages/kakao_map_plugin) |
 | 팀 그라운드 룰 | [GroundRules.md](https://github.com/ReturnZZero/return0/blob/main/GroundRules.md) |
-| 최종 수정일 | 2025-09-11 |
+| 최종 수정일 | 2025-09-16 |
 
 
