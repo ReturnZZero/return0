@@ -13,6 +13,6 @@
 | 사용할 소프트웨어 패키지의 명칭과 핵심 기능 / 용도 | - **Frontend (Flutter + Google Maps API / Payment API):** 크로스플랫폼 앱 개발 프레임워크로, 지도 기반 UI와 결제 기능 구현.<br>- **Backend (Firebase):** 사용자 인증, 데이터 저장, 알림 및 서버리스 기능 제공.<br>- **Database (Firebase Firestore, NoSQL):** 사용자·반려동물·리뷰 데이터를 실시간으로 저장 및 동기화.<br>- **Cloud Infrastructure (Google Cloud Run):** FastAPI 기반 AI 서버를 배포하고 확장성 높은 클라우드 환경 제공.<br>- **AI Recommendation (Python / FastAPI / scikit-learn / LightGBM):** 사용자와 반려동물 데이터를 분석해 개인화된 여행지 추천 수행. |
 | 사용할 소프트웨어 패키지의 명칭과 URL | - **Flutter:** [https://flutter.dev](https://flutter.dev)<br>- **Google Maps Flutter:** [https://pub.dev/packages/google_maps_flutter](https://pub.dev/packages/google_maps_flutter)<br>- **Firebase:** [https://firebase.google.com](https://firebase.google.com)<br>- **Google Cloud Run:** [https://cloud.google.com/run](https://cloud.google.com/run)<br>- **FastAPI:** [https://fastapi.tiangolo.com](https://fastapi.tiangolo.com)<br>- **scikit-learn:** [https://scikit-learn.org](https://scikit-learn.org)<br>- **LightGBM:** [https://lightgbm.readthedocs.io](https://lightgbm.readthedocs.io)<br>- **Pandas:** [https://pandas.pydata.org](https://pandas.pydata.org)<br>- **NumPy:** [https://numpy.org](https://numpy.org) |
 | 팀 그라운드 룰 | [GroundRules.md](https://github.com/ReturnZZero/return0/blob/main/GroundRules.md) |
-| 최종 수정일 | 2025-09-16 |
+| 최종 수정일 | 2025-10-13 |
 
 
