@@ -90,4 +90,12 @@ MyPetTrip은 아래 3계층 구조로 동작하도록 설계되었다.
 ---
 
 # 📁 Repository Structure
+/app # Flutter 앱 구조 초안
+/backend # FastAPI 추천 서버 코드
+/ai_prototype # Cosine Similarity 기반 AI 추천 프로토타입
+/data # 장소/반려동물 데이터 및 전처리 스크립트
+/docs # 기획안, 설계 자료, 보고서 초안
+/START # 과제 제출물 정리 폴더
+README.md # Repository 설명 문서
+
 
