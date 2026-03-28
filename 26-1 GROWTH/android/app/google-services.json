@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "273162152277",
+    "project_id": "mypettrip-6bf55",
+    "storage_bucket": "mypettrip-6bf55.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:273162152277:android:d389d4b8fc2764e7f0a7dc",
+        "android_client_info": {
+          "package_name": "com.example.mypettrip"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZRr1hiJyJXRnPNVO7W3f3txsOvrCazCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
