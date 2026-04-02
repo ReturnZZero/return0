@@ -9,16 +9,21 @@ class OpenAiService {
 
   final http.Client _client;
   // 시스템 프롬프트: 사용자 질문에서 필터값 추출 규칙(개발자 확인용)
-  // 필드: petType, petSize, indoorAllowed, outdoorOnly, leashRequired, placeType, parkingAvailable
+  // 필드: mapX, mapY, petType, petSize, indoorAllowed, outdoorOnly, leashRequired, placeType, parkingAvailable
   // 값 범위: 각 필드는 아래 프롬프트 규칙에 정의된 값만 허용
   static const String _systemPrompt = '''
 당신은 반려동물 동반 여행 앱을 위한 도우미입니다.
 반드시 한국어로 답하세요. 항상 아래 형식으로 응답하세요:
 1) 짧은 자연어 답변 (1~2문장)
-2) 다음 줄에 JSON 객체 1개 (키는 정확히 아래와 동일)
-petType, petSize, indoorAllowed, outdoorOnly, leashRequired, placeType, parkingAvailable.
+2) 다음 줄에 JSON 객체 1개 (키는 정확히 아래와 동일, 순서도 유지)
+mapX, mapY, petType, petSize, indoorAllowed, outdoorOnly, leashRequired, placeType, parkingAvailable.
 
 JSON 규칙:
+- mapX, mapY는 좌표(경도, 위도). 사용자가 지역을 언급하면 해당 지역의 중심 좌표를 넣어라.
+- 사용자가 지역을 모호하게 표현해도 반드시 가장 가까운 행정구역으로 해석하여 좌표를 넣어라.
+- 예: "경기도 인근" → "경기도", "서울 근처" → "서울특별시"
+- 절대 mapX, mapY를 null로 두지 마라 (지역이 한 글자라도 있으면 반드시 좌표 반환)
+- 좌표를 알 수 없으면 대한민국 중심 좌표를 반환하라 (mapX=127.7669, mapY=35.9078)
 - 아래 값만 사용하세요:
   petType: "dog" | "cat" | "all"
   petSize: "small" | "medium" | "large" | "all"
@@ -28,8 +33,9 @@ JSON 규칙:
   placeType: "cafe" | "restaurant" | "park" | "beach" | "hotel" | "trail" | "camp" | "shop" | "all"
   parkingAvailable: true | false | "all"
 - 사용자가 명시하지 않은 값은 기본값을 사용하세요:
-  petType="all", petSize="all", indoorAllowed="all", outdoorOnly="all",
+  mapX=null, mapY=null, petType="all", petSize="all", indoorAllowed="all", outdoorOnly="all",
   leashRequired="all", placeType="all", parkingAvailable="all".
+- JSON의 정확성이 자연어 답변보다 우선이다.
 - 추가 키를 넣지 마세요. JSON을 코드블록으로 감싸지 마세요.
 ''';
 
@@ -48,12 +54,7 @@ JSON 규칙:
         'model': model,
         'messages': [
           {'role': 'system', 'content': _systemPrompt},
-          ...messages.map(
-            (m) => {
-              'role': m['role'],
-              'content': m['content'],
-            },
-          ),
+          ...messages.map((m) => {'role': m['role'], 'content': m['content']}),
         ],
         'temperature': 0.7,
       }),
