@@ -162,10 +162,15 @@ class _AiChatPageState extends State<AiChatPage>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _sendMessage,
-                      child: const Text('전송'),
-                    ),
+                  ElevatedButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            FocusScope.of(context).unfocus();
+                            _sendMessage();
+                          },
+                    child: const Text('전송'),
+                  ),
                   ],
                 ),
               ),
