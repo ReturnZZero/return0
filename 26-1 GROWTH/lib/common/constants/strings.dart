@@ -2,7 +2,18 @@ class AppStrings {
   const AppStrings._();
 
   static const String appName = 'MyPetTrip';
-  static const String korTourApiKey = 'YOUR_KOR_TOUR_API_KEY';
+
+  // 한국관광공사 api key
+  // https://www.data.go.kr/data/15135102/openapi.do?utm_source=chatgpt.com#/API%20%EB%AA%A9%EB%A1%9D
+  static const String korTourApiKey = '';
+
+  // open ai api
+  // https://platform.openai.com/settings/proj_ZFnOu3EytdMOU6oMVXqs8aIs/api-keys
+  static const String openAiApiKey = '';
+
+  // geocoding api
+  // https://console.cloud.google.com/google/maps-apis/credentials?project=mypettrip
+  static const String googleGeocodingApiKey = '';
 
   static const String loginTitle = '로그인';
   static const String signUpTitle = '회원가입';
