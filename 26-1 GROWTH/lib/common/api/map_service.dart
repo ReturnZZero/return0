@@ -1,13 +1,18 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'google_geocoding_service.dart';
 import 'kor_tour_service.dart';
 
 class MapService {
-  const MapService({KorTourService? korTourService})
-      : _korTourService = korTourService ?? const KorTourService();
+  const MapService({
+    KorTourService? korTourService,
+    GoogleGeocodingService? geocodingService,
+  })  : _korTourService = korTourService ?? const KorTourService(),
+        _geocodingService = geocodingService ?? const GoogleGeocodingService();
 
   final KorTourService _korTourService;
+  final GoogleGeocodingService _geocodingService;
 
   Future<Position> getCurrentPosition() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -32,14 +37,32 @@ class MapService {
     );
   }
 
-  Future<List<Marker>> fetchNearbyMarkers({
+  Future<List<Map<String, dynamic>>> fetchNearbyItems({
     required LatLng current,
     int radius = 20000,
+    String? lDongRegnCd,
+    String? lDongSignguCd,
   }) async {
-    final items = await _korTourService.fetchLocationBasedList(
+    return _korTourService.fetchLocationBasedList(
       mapX: current.longitude,
       mapY: current.latitude,
       radius: radius,
+      lDongRegnCd: lDongRegnCd,
+      lDongSignguCd: lDongSignguCd,
+    );
+  }
+
+  Future<List<Marker>> fetchNearbyMarkers({
+    required LatLng current,
+    int radius = 20000,
+    String? lDongRegnCd,
+    String? lDongSignguCd,
+  }) async {
+    final items = await fetchNearbyItems(
+      current: current,
+      radius: radius,
+      lDongRegnCd: lDongRegnCd,
+      lDongSignguCd: lDongSignguCd,
     );
 
     return items
@@ -59,5 +82,40 @@ class MapService {
         })
         .whereType<Marker>()
         .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchLDongCodes({
+    int numOfRows = 1000,
+    String mobileOS = 'IOS',
+    String mobileApp = 'mypettrip',
+    String lDongListYn = 'Y',
+  }) async {
+    return _korTourService.fetchLDongCodes(
+      numOfRows: numOfRows,
+      mobileOS: mobileOS,
+      mobileApp: mobileApp,
+      lDongListYn: lDongListYn,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> searchKeyword({
+    required String keyword,
+    String? lclsSystm1,
+    String mobileOS = 'IOS',
+    String mobileApp = 'mypettrip',
+    String arrange = 'O',
+  }) async {
+    return _korTourService.searchKeyword(
+      keyword: keyword,
+      lclsSystm1: lclsSystm1,
+      mobileOS: mobileOS,
+      mobileApp: mobileApp,
+      arrange: arrange,
+    );
+  }
+
+  Future<LatLng> geocodeAddress(String address) async {
+    final result = await _geocodingService.geocodeAddress(address);
+    return LatLng(result['lat']!, result['lng']!);
   }
 }
