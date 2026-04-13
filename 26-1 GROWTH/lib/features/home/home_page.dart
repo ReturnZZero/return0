@@ -20,12 +20,14 @@ class _HomePageState extends State<HomePage> {
 
   final List<_CategoryItem> _categories = const [
     _CategoryItem(label: '숙박', assetPath: 'assets/icon_house.png'),
+    _CategoryItem(label: '추천코스', assetPath: 'assets/icon_transport.png'),
     _CategoryItem(label: '행사', assetPath: 'assets/icon_walk.png'),
     _CategoryItem(label: '체험관광', assetPath: 'assets/icon_cafe.png'),
     _CategoryItem(label: '음식', assetPath: 'assets/icon_food.png'),
     _CategoryItem(label: '역사관광', assetPath: 'assets/icon_cafe.png'),
     _CategoryItem(label: '스포츠', assetPath: 'assets/icon_walk.png'),
     _CategoryItem(label: '자연관광', assetPath: 'assets/icon_cafe.png'),
+    _CategoryItem(label: '쇼핑', assetPath: 'assets/icon_tour.png'),
     _CategoryItem(label: '문화관광', assetPath: 'assets/icon_cafe.png'),
   ];
 
@@ -34,12 +36,14 @@ class _HomePageState extends State<HomePage> {
 
   static const Map<String, String> _categoryCodeMap = {
     '숙박': 'AC',
+    '추천코스': 'C01',
     '행사': 'EV',
     '체험관광': 'EX',
     '음식': 'FD',
     '역사관광': 'HS',
     '스포츠': 'LS',
     '자연관광': 'NA',
+    '쇼핑': 'SH',
     '문화관광': 'VE',
   };
 
@@ -82,18 +86,16 @@ class _HomePageState extends State<HomePage> {
   Future<void> _search() async {
     final keyword = _searchController.text.trim();
     if (keyword.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('검색어를 입력해 주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('검색어를 입력해 주세요.')),
+      );
       return;
     }
 
-    final selectedLabel = _selectedIndex == null
-        ? null
-        : _categories[_selectedIndex!].label;
-    final lclsSystm1 = selectedLabel == null
-        ? null
-        : _categoryCodeMap[selectedLabel];
+    final selectedLabel =
+        _selectedIndex == null ? null : _categories[_selectedIndex!].label;
+    final lclsSystm1 =
+        selectedLabel == null ? null : _categoryCodeMap[selectedLabel];
 
     setState(() => _isSearching = true);
     try {
@@ -109,16 +111,16 @@ class _HomePageState extends State<HomePage> {
           ..clear()
           ..addAll(results);
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('검색 결과 ${results.length}건')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('검색 결과 ${results.length}건')),
+      );
     } catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSearching = false);
@@ -141,7 +143,9 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-                Center(child: Image.asset('assets/icon_login.png', width: 240)),
+                Center(
+                  child: Image.asset('assets/icon_login.png', width: 240),
+                ),
                 const SizedBox(height: 24),
                 const Text(
                   '반가워요.',
@@ -152,10 +156,10 @@ class _HomePageState extends State<HomePage> {
                   '오늘은 누구와 어디로 떠나볼까요?',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                 ),
+                const SizedBox(height: 20),
+                _buildCategoryGrid(accentColor),
                 const SizedBox(height: 24),
                 _buildSearchBar(),
-                const SizedBox(height: 24),
-                _buildCategoryGrid(accentColor),
                 if (_results.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _buildResultsList(),
@@ -184,9 +188,8 @@ class _HomePageState extends State<HomePage> {
             final item = _results[index];
             final title = '${item['title'] ?? '이름 없음'}';
             final address = '${item['addr1'] ?? ''}';
-            final isFavorite = _favoriteIds.contains(
-              FavoriteService.itemId(item),
-            );
+            final isFavorite =
+                _favoriteIds.contains(FavoriteService.itemId(item));
             return Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -214,46 +217,48 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                address.isEmpty ? '주소 정보 없음' : address,
-                                style: const TextStyle(color: Colors.black54),
-                              ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              address.isEmpty ? '주소 정보 없음' : address,
+                              style: const TextStyle(color: Colors.black54),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: () => _toggleFavorite(item),
-                          icon: Icon(
-                            isFavorite ? Icons.favorite : Icons.favorite_border,
-                          ),
-                          color: isFavorite ? Colors.redAccent : Colors.black54,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: _NetworkImageWithFallback(
-                        imageUrl: '${item['firstimage'] ?? ''}',
-                        height: 160,
                       ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () => _toggleFavorite(item),
+                        icon: Icon(
+                          isFavorite
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                        ),
+                        color: isFavorite ? Colors.redAccent : Colors.black54,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: _NetworkImageWithFallback(
+                      imageUrl: '${item['firstimage'] ?? ''}',
+                      height: 160,
                     ),
+                  ),
                   ],
                 ),
               ),
@@ -335,15 +340,15 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onPressed: _isSearching
-                ? null
-                : () {
-                    FocusScope.of(context).unfocus();
-                    _search();
-                  },
-            child: Text(_isSearching ? '검색 중...' : '검색'),
-          ),
-        ),
+                  onPressed: _isSearching
+                      ? null
+                      : () {
+                          FocusScope.of(context).unfocus();
+                          _search();
+                        },
+                  child: Text(_isSearching ? '검색 중...' : '검색'),
+                ),
+              ),
       ],
     );
   }
