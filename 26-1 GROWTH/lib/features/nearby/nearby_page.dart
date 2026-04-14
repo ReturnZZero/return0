@@ -14,24 +14,34 @@ class NearbyPage extends StatefulWidget {
 }
 
 class _NearbyPageState extends State<NearbyPage> {
+  static const int _defaultSearchRadius = 4000;
+
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
-  final _mapService = const MapService();
+  final _mapService = MapService();
   final List<Map<String, dynamic>> _items = [];
 
   static const LatLng _defaultCenter = LatLng(37.5665, 126.9780);
   static const List<String> _categoryOptions = [
     '숙박',
-    '추천코스',
     '행사',
     '체험관광',
     '음식',
     '역사관광',
     '스포츠',
     '자연관광',
-    '쇼핑',
     '문화관광',
   ];
+  static const Map<String, String> _categoryCodeMap = {
+    '숙박': 'AC',
+    '행사': 'EV',
+    '체험관광': 'EX',
+    '음식': 'FD',
+    '역사관광': 'HS',
+    '스포츠': 'LS',
+    '자연관광': 'NA',
+    '문화관광': 'VE',
+  };
 
   String? _selectedCategory;
   LatLng _mapCenter = _defaultCenter;
@@ -162,7 +172,7 @@ class _NearbyPageState extends State<NearbyPage> {
   Future<double> _calculateVisibleRadius(LatLng center) async {
     final controller = _mapController;
     if (controller == null) {
-      return 20000;
+      return _defaultSearchRadius.toDouble();
     }
 
     try {
@@ -180,9 +190,11 @@ class _NearbyPageState extends State<NearbyPage> {
         bounds.southwest.longitude,
       );
       final radius = distToNe > distToSw ? distToNe : distToSw;
-      return radius.isFinite && radius > 0 ? radius : 20000;
+      return radius.isFinite && radius > 0
+          ? radius
+          : _defaultSearchRadius.toDouble();
     } catch (_) {
-      return 20000;
+      return _defaultSearchRadius.toDouble();
     }
   }
 
@@ -193,14 +205,15 @@ class _NearbyPageState extends State<NearbyPage> {
     setState(() => _isSearching = true);
 
     try {
+      final categoryCode = _selectedCategory == null
+          ? null
+          : _categoryCodeMap[_selectedCategory!];
       final items = await _mapService.fetchNearbyItems(
         current: center,
-        radius: radius ?? 20000,
+        radius: radius ?? _defaultSearchRadius,
+        categoryCode: categoryCode,
       );
-      final markers = await _mapService.fetchNearbyMarkers(
-        current: center,
-        radius: radius ?? 20000,
-      );
+      final markers = _mapService.buildMarkersFromItems(items);
 
       if (!mounted) {
         return;
@@ -255,7 +268,7 @@ class _NearbyPageState extends State<NearbyPage> {
         ),
       );
 
-      await _animateToRadius(current, 4000);
+      await _animateToRadius(current, _defaultSearchRadius.toDouble());
     } catch (e) {
       if (!mounted) {
         return;
@@ -275,8 +288,8 @@ class _NearbyPageState extends State<NearbyPage> {
         '${_selectedSidoName} ${_selectedSigunguName}',
       );
       _mapCenter = target;
-      await _animateToRadius(target, 4000);
-      await _searchAt(target, radius: 20000);
+      await _animateToRadius(target, _defaultSearchRadius.toDouble());
+      await _searchAt(target, radius: _defaultSearchRadius);
     } catch (_) {
       if (!mounted) {
         return;
@@ -440,9 +453,11 @@ class _NearbyPageState extends State<NearbyPage> {
                     ),
                     onSelected: (_) {
                       setState(() {
-                        _selectedCategory =
-                            _selectedCategory == label ? null : label;
+                        _selectedCategory = _selectedCategory == label
+                            ? null
+                            : label;
                       });
+                      _searchByRegion();
                     },
                   );
                 },
