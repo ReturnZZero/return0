@@ -22,7 +22,7 @@ class TourSeedResult {
 
 class TourSeedService {
   TourSeedService({MapService? mapService, FirestoreService? firestoreService})
-    : _mapService = mapService ?? const MapService(),
+    : _mapService = mapService ?? MapService(),
       _firestoreService = firestoreService ?? FirestoreService();
 
   final MapService _mapService;

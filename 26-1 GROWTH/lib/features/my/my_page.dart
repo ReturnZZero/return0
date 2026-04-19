@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../common/api/firebase_auth_service.dart';
+import '../../common/api/firestore_service.dart';
 import '../../common/api/tour_seed_service.dart';
 
 class MyPage extends StatefulWidget {
@@ -12,9 +13,18 @@ class MyPage extends StatefulWidget {
 
 class _MyPageState extends State<MyPage> {
   final _tourSeedService = TourSeedService();
+  final _firestoreService = FirestoreService();
   bool _isSeeding = false;
+  bool _hasSeededTourPlaces = false;
+  bool _isCheckingTourPlaces = true;
   String _seedStatus = '테스트 버튼을 누르면 지역 데이터를 Firestore에 적재합니다.';
   TourSeedResult? _lastResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTourPlaceStatus();
+  }
 
   Future<void> _logout(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -27,7 +37,7 @@ class _MyPageState extends State<MyPage> {
   }
 
   Future<void> _seedTourPlaces() async {
-    if (_isSeeding) {
+    if (_isSeeding || _hasSeededTourPlaces) {
       return;
     }
 
@@ -55,6 +65,7 @@ class _MyPageState extends State<MyPage> {
 
       setState(() {
         _lastResult = result;
+        _hasSeededTourPlaces = result.savedCount > 0 || _hasSeededTourPlaces;
         _seedStatus =
             '적재 완료: ${result.savedCount}건 저장, ${result.skippedCount}개 지역 건너뜀';
       });
@@ -75,6 +86,33 @@ class _MyPageState extends State<MyPage> {
     }
   }
 
+  Future<void> _loadTourPlaceStatus() async {
+    setState(() => _isCheckingTourPlaces = true);
+
+    try {
+      final hasTourPlaces = await _firestoreService.hasTourPlaces();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _hasSeededTourPlaces = hasTourPlaces;
+        if (hasTourPlaces) {
+          _seedStatus = 'tour_places 데이터가 이미 있어서 테스트 버튼이 비활성화됐습니다.';
+        }
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _seedStatus = 'Firestore 상태 확인 실패: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isCheckingTourPlaces = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,6 +128,20 @@ class _MyPageState extends State<MyPage> {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                  onPressed: () => _logout(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
+                  ),
+                  child: const Text('로그아웃'),
+                ),
+              ),
+              const Spacer(),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -128,21 +180,24 @@ class _MyPageState extends State<MyPage> {
                   ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: _isSeeding ? null : _seedTourPlaces,
+                onPressed:
+                    _isSeeding || _isCheckingTourPlaces || _hasSeededTourPlaces
+                    ? null
+                    : _seedTourPlaces,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text(_isSeeding ? '적재 중...' : '테스트'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () => _logout(context),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Text(
+                  _isCheckingTourPlaces
+                      ? '상태 확인 중...'
+                      : _isSeeding
+                      ? '적재 중...'
+                      : _hasSeededTourPlaces
+                      ? '이미 적재됨'
+                      : '테스트',
                 ),
-                child: const Text('로그아웃'),
               ),
               const SizedBox(height: 12),
             ],
