@@ -128,18 +128,12 @@ class _MyPageState extends State<MyPage> {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: OutlinedButton(
-                  onPressed: () => _logout(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 14,
-                    ),
-                  ),
-                  child: const Text('로그아웃'),
+              OutlinedButton(
+                onPressed: () => _logout(context),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
+                child: const Text('로그아웃'),
               ),
               const Spacer(),
               Container(
