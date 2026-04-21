@@ -20,13 +20,13 @@ class _HomePageState extends State<HomePage> {
 
   final List<_CategoryItem> _categories = const [
     _CategoryItem(label: '숙박', assetPath: 'assets/icon_house.png'),
-    _CategoryItem(label: '행사', assetPath: 'assets/icon_walk.png'),
-    _CategoryItem(label: '체험관광', assetPath: 'assets/icon_cafe.png'),
+    _CategoryItem(label: '쇼핑', assetPath: 'assets/icon_shopping.png'),
     _CategoryItem(label: '음식', assetPath: 'assets/icon_food.png'),
-    _CategoryItem(label: '역사관광', assetPath: 'assets/icon_cafe.png'),
-    _CategoryItem(label: '스포츠', assetPath: 'assets/icon_walk.png'),
-    _CategoryItem(label: '자연관광', assetPath: 'assets/icon_cafe.png'),
-    _CategoryItem(label: '문화관광', assetPath: 'assets/icon_cafe.png'),
+    _CategoryItem(label: '스포츠', assetPath: 'assets/icon_sports.png'),
+    _CategoryItem(label: '체험관광', assetPath: 'assets/icon_activity.png'),
+    _CategoryItem(label: '자연관광', assetPath: 'assets/icon_walk.png'),
+    _CategoryItem(label: '문화관광', assetPath: 'assets/icon_culture.png'),
+    _CategoryItem(label: '역사관광', assetPath: 'assets/icon_history.png'),
   ];
 
   int? _selectedIndex;
@@ -34,13 +34,13 @@ class _HomePageState extends State<HomePage> {
 
   static const Map<String, String> _categoryCodeMap = {
     '숙박': 'AC',
-    '행사': 'EV',
-    '체험관광': 'EX',
+    '쇼핑': 'SH',
     '음식': 'FD',
-    '역사관광': 'HS',
     '스포츠': 'LS',
+    '체험관광': 'EX',
     '자연관광': 'NA',
     '문화관광': 'VE',
+    '역사관광': 'HS',
   };
 
   @override
