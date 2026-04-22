@@ -129,20 +129,24 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     const accentColor = Color(0xFFFFDE59);
+    const pageBackground = Color(0xFFF8F7F3);
 
     return Scaffold(
+      backgroundColor: pageBackground,
       body: SafeArea(
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusScope.of(context).unfocus(),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
                 Center(child: Image.asset('assets/icon_login.png', width: 240)),
                 const SizedBox(height: 24),
+                _buildSearchBar(accentColor),
+                const SizedBox(height: 22),
                 const Text(
                   '반가워요.',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
@@ -153,11 +157,11 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 24),
-                _buildSearchBar(),
-                const SizedBox(height: 24),
+                _buildRegisterCard(accentColor),
+                const SizedBox(height: 28),
                 _buildCategoryGrid(accentColor),
                 if (_results.isNotEmpty) ...[
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 28),
                   _buildResultsList(),
                 ],
               ],
@@ -268,34 +272,51 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCategoryGrid(Color accentColor) {
     final double itemWidth =
-        (MediaQuery.of(context).size.width - 16 * 2 - 12 * 3) / 4;
+        (MediaQuery.of(context).size.width - 20 * 2 - 12 * 3) / 4;
 
     return Wrap(
       spacing: 12,
-      runSpacing: 12,
+      runSpacing: 18,
       children: List.generate(_categories.length, (index) {
         final item = _categories[index];
         final isSelected = _selectedIndex == index;
         return SizedBox(
           width: itemWidth,
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(18),
             onTap: () => setState(() {
               _selectedIndex = _selectedIndex == index ? null : index;
             }),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: isSelected ? accentColor : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE6E6E6)),
-              ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _CategoryIcon(item: item),
                   const SizedBox(height: 8),
-                  Text(item.label, style: const TextStyle(fontSize: 12)),
+                  Text(
+                    item.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? const Color(0xFF3B372F)
+                          : const Color(0xFF6A665F),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: isSelected ? accentColor : Colors.transparent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -305,46 +326,107 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: '어디로 떠나고 싶으신가요?',
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+  Widget _buildSearchBar(Color accentColor) {
+    return TextField(
+      controller: _searchController,
+      textInputAction: TextInputAction.search,
+      onSubmitted: (_) => _search(),
+      decoration: InputDecoration(
+        hintText: '검색어를 입력하세요',
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: const Icon(
+          Icons.search,
+          size: 20,
+          color: Color(0xFF3B372F),
+        ),
+        suffixIcon: IconButton(
+          onPressed: _isSearching
+              ? null
+              : () {
+                  FocusScope.of(context).unfocus();
+                  _search();
+                },
+          icon: Icon(
+            _isSearching ? Icons.hourglass_top_rounded : Icons.arrow_forward,
+            color: const Color(0xFF3B372F),
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: accentColor, width: 1.2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: accentColor, width: 1.2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: accentColor, width: 1.4),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRegisterCard(Color accentColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE8E2D5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            '아직 등록된 반려동물이 없어요!',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2E2A23),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '반려동물을 등록하고, 맞춤형 정보를 만나보세요',
+            style: TextStyle(fontSize: 12, color: Color(0xFF8C877E)),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: 128,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('등록 기능은 곧 연결할게요.')),
+                );
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('등록하기'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          height: 48,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFDE59),
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: _isSearching
-                ? null
-                : () {
-                    FocusScope.of(context).unfocus();
-                    _search();
-                  },
-            child: Text(_isSearching ? '검색 중...' : '검색'),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
