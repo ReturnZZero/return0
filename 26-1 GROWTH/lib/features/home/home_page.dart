@@ -290,11 +290,12 @@ class _HomePageState extends State<HomePage> {
             onTap: () => setState(() {
               _selectedIndex = _selectedIndex == index ? null : index;
             }),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
+            child: Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFFFE082) : Colors.transparent,
+                color: isSelected
+                    ? const Color(0xFFFFE082)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Column(
