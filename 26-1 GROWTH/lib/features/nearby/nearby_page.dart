@@ -23,9 +23,9 @@ class _NearbyPageState extends State<NearbyPage> {
 
   static const LatLng _defaultCenter = LatLng(37.5665, 126.9780);
   static const List<String> _categoryOptions = [
-    '숙박',
+    '숙소',
     '쇼핑',
-    '음식',
+    '음식점',
     '스포츠',
     '체험관광',
     '자연관광',
@@ -33,9 +33,9 @@ class _NearbyPageState extends State<NearbyPage> {
     '역사관광',
   ];
   static const Map<String, String> _categoryCodeMap = {
-    '숙박': 'AC',
+    '숙소': 'AC',
     '쇼핑': 'SH',
-    '음식': 'FD',
+    '음식점': 'FD',
     '스포츠': 'LS',
     '체험관광': 'EX',
     '자연관광': 'NA',

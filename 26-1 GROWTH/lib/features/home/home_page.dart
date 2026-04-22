@@ -19,9 +19,9 @@ class _HomePageState extends State<HomePage> {
   final Set<String> _favoriteIds = {};
 
   final List<_CategoryItem> _categories = const [
-    _CategoryItem(label: '숙박', assetPath: 'assets/icon_house.png'),
+    _CategoryItem(label: '숙소', assetPath: 'assets/icon_house.png'),
     _CategoryItem(label: '쇼핑', assetPath: 'assets/icon_shopping.png'),
-    _CategoryItem(label: '음식', assetPath: 'assets/icon_food.png'),
+    _CategoryItem(label: '음식점', assetPath: 'assets/icon_food.png'),
     _CategoryItem(label: '스포츠', assetPath: 'assets/icon_sports.png'),
     _CategoryItem(label: '체험관광', assetPath: 'assets/icon_activity.png'),
     _CategoryItem(label: '자연관광', assetPath: 'assets/icon_walk.png'),
@@ -33,9 +33,9 @@ class _HomePageState extends State<HomePage> {
   bool _isSearching = false;
 
   static const Map<String, String> _categoryCodeMap = {
-    '숙박': 'AC',
+    '숙소': 'AC',
     '쇼핑': 'SH',
-    '음식': 'FD',
+    '음식점': 'FD',
     '스포츠': 'LS',
     '체험관광': 'EX',
     '자연관광': 'NA',
@@ -129,10 +129,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     const accentColor = Color(0xFFFFDE59);
-    const pageBackground = Color(0xFFF8F7F3);
 
     return Scaffold(
-      backgroundColor: pageBackground,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
@@ -142,11 +141,11 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 Center(child: Image.asset('assets/icon_login.png', width: 240)),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 _buildSearchBar(accentColor),
-                const SizedBox(height: 22),
+                const SizedBox(height: 16),
                 const Text(
                   '반가워요.',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
@@ -156,12 +155,12 @@ class _HomePageState extends State<HomePage> {
                   '오늘은 누구와 어디로 떠나볼까요?',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 _buildRegisterCard(accentColor),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 _buildCategoryGrid(accentColor),
                 if (_results.isNotEmpty) ...[
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 18),
                   _buildResultsList(),
                 ],
               ],
@@ -272,11 +271,11 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCategoryGrid(Color accentColor) {
     final double itemWidth =
-        (MediaQuery.of(context).size.width - 20 * 2 - 12 * 3) / 4;
+        (MediaQuery.of(context).size.width - 20 * 2 - 8 * 3) / 4;
 
     return Wrap(
-      spacing: 12,
-      runSpacing: 18,
+      spacing: 8,
+      runSpacing: 10,
       children: List.generate(_categories.length, (index) {
         final item = _categories[index];
         final isSelected = _selectedIndex == index;
@@ -284,37 +283,36 @@ class _HomePageState extends State<HomePage> {
           width: itemWidth,
           child: InkWell(
             borderRadius: BorderRadius.circular(18),
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            overlayColor: WidgetStatePropertyAll(Colors.transparent),
             onTap: () => setState(() {
               _selectedIndex = _selectedIndex == index ? null : index;
             }),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFFFFE082) : Colors.transparent,
+                borderRadius: BorderRadius.circular(22),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _CategoryIcon(item: item),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 3),
                   Text(
                     item.label,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: isSelected
                           ? FontWeight.w700
                           : FontWeight.w500,
                       color: isSelected
                           ? const Color(0xFF3B372F)
                           : const Color(0xFF6A665F),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: isSelected ? accentColor : Colors.transparent,
-                      shape: BoxShape.circle,
                     ),
                   ),
                 ],
@@ -375,7 +373,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildRegisterCard(Color accentColor) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -398,12 +396,12 @@ class _HomePageState extends State<HomePage> {
               color: Color(0xFF2E2A23),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           const Text(
             '반려동물을 등록하고, 맞춤형 정보를 만나보세요',
             style: TextStyle(fontSize: 12, color: Color(0xFF8C877E)),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           SizedBox(
             width: 128,
             child: ElevatedButton.icon(
@@ -447,8 +445,8 @@ class _CategoryIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.asset(
       item.assetPath,
-      width: 28,
-      height: 28,
+      width: 46,
+      height: 46,
       fit: BoxFit.contain,
     );
   }
