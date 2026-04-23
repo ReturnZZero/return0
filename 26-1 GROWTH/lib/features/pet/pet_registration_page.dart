@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../common/api/pet_profile_service.dart';
 import 'pet_image_registration_page.dart';
 
 enum PetGender { male, female }
@@ -8,13 +9,16 @@ enum PetGender { male, female }
 enum PetActivityLevel { low, medium, high }
 
 class PetRegistrationPage extends StatefulWidget {
-  const PetRegistrationPage({super.key});
+  const PetRegistrationPage({super.key, this.initialData});
+
+  final Map<String, dynamic>? initialData;
 
   @override
   State<PetRegistrationPage> createState() => _PetRegistrationPageState();
 }
 
 class _PetRegistrationPageState extends State<PetRegistrationPage> {
+  final _petProfileService = const PetProfileService();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
@@ -34,6 +38,12 @@ class _PetRegistrationPageState extends State<PetRegistrationPage> {
   bool _parkingAvailable = false;
 
   @override
+  void initState() {
+    super.initState();
+    _applyInitialData();
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
@@ -43,6 +53,48 @@ class _PetRegistrationPageState extends State<PetRegistrationPage> {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  void _applyInitialData() {
+    final data = widget.initialData;
+    if (data == null) {
+      return;
+    }
+
+    _nameController.text = '${data['name'] ?? ''}'.trim();
+    _ageController.text = '${data['age'] ?? ''}'.trim();
+    _breedController.text = '${data['breed'] ?? ''}'.trim();
+    _weightController.text = '${data['weightKg'] ?? ''}'.trim();
+
+    final gender = '${data['gender'] ?? ''}'.trim().toLowerCase();
+    _gender = gender == 'female' ? PetGender.female : PetGender.male;
+
+    final activity = '${data['activityLevel'] ?? ''}'.trim().toLowerCase();
+    switch (activity) {
+      case 'low':
+        _activityLevel = PetActivityLevel.low;
+        break;
+      case 'high':
+        _activityLevel = PetActivityLevel.high;
+        break;
+      default:
+        _activityLevel = PetActivityLevel.medium;
+    }
+
+    _isNeutered = data['isNeutered'] == true;
+    _isDangerousBreed = data['isDangerousBreed'] == true;
+    _isOffLeash = data['isOffLeash'] == true;
+    _indoorAllowed = data['indoorAllowed'] == true;
+    _parkingAvailable = data['parkingAvailable'] == true;
+
+    final checklist = data['travelChecklist'];
+    if (checklist is List) {
+      for (var i = 0; i < _travelCheckControllers.length; i++) {
+        _travelCheckControllers[i].text = i < checklist.length
+            ? '${checklist[i] ?? ''}'.trim()
+            : '';
+      }
+    }
   }
 
   double? get _weightKg => double.tryParse(_weightController.text.trim());
@@ -79,6 +131,7 @@ class _PetRegistrationPageState extends State<PetRegistrationPage> {
         .toList();
 
     final payload = <String, dynamic>{
+      ...?widget.initialData,
       'name': _nameController.text.trim(),
       'age': int.parse(_ageController.text.trim()),
       'gender': _gender.name,
@@ -147,6 +200,46 @@ class _PetRegistrationPageState extends State<PetRegistrationPage> {
         );
       },
     );
+  }
+
+  Future<void> _deleteProfile() async {
+    final id = '${widget.initialData?['id'] ?? ''}'.trim();
+    if (id.isEmpty) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('반려동물 삭제'),
+          content: const Text('이 반려동물 정보를 삭제할까요?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await _petProfileService.deletePetProfile(id);
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pop({'deleted': true, 'id': id});
   }
 
   @override
@@ -385,6 +478,29 @@ class _PetRegistrationPageState extends State<PetRegistrationPage> {
                       setState(() => _parkingAvailable = value),
                 ),
                 const SizedBox(height: 26),
+                if (widget.initialData != null) ...[
+                  SizedBox(
+                    height: 54,
+                    child: OutlinedButton(
+                      onPressed: _deleteProfile,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFD9D9D9)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      child: const Text(
+                        '삭제',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 SizedBox(
                   height: 54,
                   child: ElevatedButton(

@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../common/api/favorite_service.dart';
 import '../../common/api/firestore_service.dart';
+import '../../common/api/pet_profile_service.dart';
+import '../pet/pet_registration_page.dart';
 import 'home_detail_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -15,8 +19,11 @@ class _HomePageState extends State<HomePage> {
   final _searchController = TextEditingController();
   final _favoriteService = const FavoriteService();
   final _firestoreService = FirestoreService();
+  final _petProfileService = const PetProfileService();
   final List<Map<String, dynamic>> _results = [];
   final Set<String> _favoriteIds = {};
+  final List<Map<String, dynamic>> _petProfiles = [];
+  String? _selectedPetId;
 
   final List<_CategoryItem> _categories = const [
     _CategoryItem(label: '숙소', assetPath: 'assets/icon_house.png'),
@@ -47,6 +54,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadFavorites();
+    _loadPetProfiles();
   }
 
   Future<void> _loadFavorites() async {
@@ -71,6 +79,55 @@ class _HomePageState extends State<HomePage> {
         ..clear()
         ..addAll(list.map(FavoriteService.itemId));
     });
+  }
+
+  Future<void> _loadPetProfiles() async {
+    final profiles = await _petProfileService.loadPetProfiles();
+    final selectedId = await _petProfileService.loadSelectedPetId();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _petProfiles
+        ..clear()
+        ..addAll(profiles);
+      _selectedPetId =
+          selectedId ??
+          (profiles.isNotEmpty ? '${profiles.first['id']}' : null);
+    });
+  }
+
+  Future<void> _openPetRegistration({Map<String, dynamic>? initialData}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PetRegistrationPage(initialData: initialData),
+      ),
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+    if (result is Map && result['deleted'] == true) {
+      await _loadPetProfiles();
+      messenger.showSnackBar(const SnackBar(content: Text('반려동물 정보를 삭제했어요.')));
+      return;
+    }
+    await _loadPetProfiles();
+    messenger.showSnackBar(
+      SnackBar(content: Text('${result['name']} 등록을 완료했어요.')),
+    );
+  }
+
+  Future<void> _selectPet(Map<String, dynamic> profile) async {
+    final id = '${profile['id'] ?? ''}'.trim();
+    if (id.isEmpty) {
+      return;
+    }
+    await _petProfileService.setSelectedPetId(id);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _selectedPetId = id);
   }
 
   @override
@@ -372,6 +429,106 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildRegisterCard(Color accentColor) {
+    if (_petProfiles.isNotEmpty) {
+      return SizedBox(
+        height: 150,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: _petProfiles.length + 1,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, index) {
+            if (index == _petProfiles.length) {
+              return _buildAddPetCard(accentColor);
+            }
+
+            final profile = _petProfiles[index];
+            final imagePath = '${profile['imagePath'] ?? ''}'.trim();
+            final hasImageFile =
+                imagePath.isNotEmpty && File(imagePath).existsSync();
+            final petName = '${profile['name'] ?? '이름 없음'}';
+            final isSelected = '${profile['id'] ?? ''}' == _selectedPetId;
+
+            return SizedBox(
+              width: 112,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () async {
+                    await _selectPet(profile);
+                    if (!mounted) {
+                      return;
+                    }
+                    await _openPetRegistration(initialData: profile);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFFFFE082)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFFE0B93C)
+                            : const Color(0xFFE8E2D5),
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x12000000),
+                          blurRadius: 16,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: !hasImageFile
+                              ? Image.asset(
+                                  'assets/icon_reg_default.png',
+                                  width: 68,
+                                  height: 68,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.file(
+                                  File(imagePath),
+                                  width: 68,
+                                  height: 68,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    'assets/icon_reg_default.png',
+                                    width: 68,
+                                    height: 68,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          petName,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2E2A23),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -406,11 +563,7 @@ class _HomePageState extends State<HomePage> {
           SizedBox(
             width: 128,
             child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('등록 기능은 곧 연결할게요.')),
-                );
-              },
+              onPressed: () => _openPetRegistration(),
               icon: const Icon(Icons.add, size: 18),
               label: const Text('등록하기'),
               style: ElevatedButton.styleFrom(
@@ -425,6 +578,44 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAddPetCard(Color accentColor) {
+    return SizedBox(
+      width: 96,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () => _openPetRegistration(),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFE8E2D5)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x12000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.add, color: Colors.black),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
