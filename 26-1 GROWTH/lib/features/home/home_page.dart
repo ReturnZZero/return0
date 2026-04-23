@@ -27,8 +27,8 @@ class _HomePageState extends State<HomePage> {
 
   final List<_CategoryItem> _categories = const [
     _CategoryItem(label: '숙소', assetPath: 'assets/icon_house.png'),
-    _CategoryItem(label: '쇼핑', assetPath: 'assets/icon_shopping.png'),
     _CategoryItem(label: '음식점', assetPath: 'assets/icon_food.png'),
+    _CategoryItem(label: '쇼핑', assetPath: 'assets/icon_shopping.png'),
     _CategoryItem(label: '스포츠', assetPath: 'assets/icon_sports.png'),
     _CategoryItem(label: '체험관광', assetPath: 'assets/icon_activity.png'),
     _CategoryItem(label: '자연관광', assetPath: 'assets/icon_walk.png'),

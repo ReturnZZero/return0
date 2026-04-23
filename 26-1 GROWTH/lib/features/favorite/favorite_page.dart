@@ -13,8 +13,8 @@ class FavoritePage extends StatefulWidget {
 class _FavoritePageState extends State<FavoritePage> {
   static const List<String> _categoryOptions = [
     '숙소',
-    '쇼핑',
     '음식점',
+    '쇼핑',
     '스포츠',
     '체험관광',
     '자연관광',
