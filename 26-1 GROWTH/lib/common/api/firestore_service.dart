@@ -20,6 +20,30 @@ class FirestoreService {
     return snapshot.docs.isNotEmpty;
   }
 
+  Future<int> clearTourPlaces() async {
+    var deletedCount = 0;
+
+    while (true) {
+      final snapshot = await _firestore
+          .collection(tourPlacesCollection)
+          .limit(_maxBatchSize)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        break;
+      }
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+      deletedCount += snapshot.docs.length;
+    }
+
+    return deletedCount;
+  }
+
   Future<List<Map<String, dynamic>>> searchTourPlaces({
     required String keyword,
     String? categoryCode,

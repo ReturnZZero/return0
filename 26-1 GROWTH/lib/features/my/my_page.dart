@@ -15,9 +15,10 @@ class _MyPageState extends State<MyPage> {
   final _tourSeedService = TourSeedService();
   final _firestoreService = FirestoreService();
   bool _isSeeding = false;
+  bool _isResetting = false;
   bool _hasSeededTourPlaces = false;
   bool _isCheckingTourPlaces = true;
-  String _seedStatus = '테스트 버튼을 누르면 지역 데이터를 Firestore에 적재합니다.';
+  String _seedStatus = 'DB업로드 버튼을 누르면 지역 데이터를 Firestore에 적재합니다.';
   TourSeedResult? _lastResult;
 
   @override
@@ -71,7 +72,7 @@ class _MyPageState extends State<MyPage> {
       });
 
       messenger.showSnackBar(
-        SnackBar(content: Text('테스트 적재 완료: ${result.savedCount}건 저장')),
+        SnackBar(content: Text('DB업로드 완료: ${result.savedCount}건 저장')),
       );
     } catch (error) {
       if (!mounted) {
@@ -98,7 +99,7 @@ class _MyPageState extends State<MyPage> {
       setState(() {
         _hasSeededTourPlaces = hasTourPlaces;
         if (hasTourPlaces) {
-          _seedStatus = 'tour_places 데이터가 이미 있어서 테스트 버튼이 비활성화됐습니다.';
+          _seedStatus = 'tour_places 데이터가 이미 있어서 DB업로드 버튼이 비활성화됐습니다.';
         }
       });
     } catch (error) {
@@ -109,6 +110,74 @@ class _MyPageState extends State<MyPage> {
     } finally {
       if (mounted) {
         setState(() => _isCheckingTourPlaces = false);
+      }
+    }
+  }
+
+  Future<void> _resetTourPlaces() async {
+    if (_isResetting || _isCheckingTourPlaces) {
+      return;
+    }
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('장소 DB 초기화'),
+          content: const Text(
+            'tour_places 장소 데이터만 삭제합니다.\n회원가입 정보나 다른 데이터는 삭제되지 않습니다.\n초기화할까요?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('초기화'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true || !mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() {
+      _isResetting = true;
+      _lastResult = null;
+      _seedStatus = 'tour_places 데이터를 초기화하는 중입니다...';
+    });
+
+    try {
+      final deletedCount = await _firestoreService.clearTourPlaces();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _hasSeededTourPlaces = false;
+        _seedStatus = deletedCount > 0
+            ? '초기화 완료: tour_places ${deletedCount}건 삭제'
+            : '초기화 완료: 삭제할 tour_places 데이터가 없었습니다.';
+      });
+
+      messenger.showSnackBar(
+        SnackBar(content: Text('tour_places 초기화 완료: ${deletedCount}건 삭제')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _seedStatus = '초기화 실패: $error');
+      messenger.showSnackBar(SnackBar(content: Text('초기화에 실패했어요: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _isResetting = false);
       }
     }
   }
@@ -180,7 +249,10 @@ class _MyPageState extends State<MyPage> {
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed:
-                    _isSeeding || _isCheckingTourPlaces || _hasSeededTourPlaces
+                    _isSeeding ||
+                        _isResetting ||
+                        _isCheckingTourPlaces ||
+                        _hasSeededTourPlaces
                     ? null
                     : _seedTourPlaces,
                 style: ElevatedButton.styleFrom(
@@ -193,8 +265,18 @@ class _MyPageState extends State<MyPage> {
                       ? '적재 중...'
                       : _hasSeededTourPlaces
                       ? '이미 적재됨'
-                      : '테스트',
+                      : 'DB업로드',
                 ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: _isSeeding || _isResetting || _isCheckingTourPlaces
+                    ? null
+                    : _resetTourPlaces,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: Text(_isResetting ? '초기화 중...' : '초기화'),
               ),
               const SizedBox(height: 12),
             ],
