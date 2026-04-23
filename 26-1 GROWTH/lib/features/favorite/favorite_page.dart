@@ -52,95 +52,100 @@ class _FavoritePageState extends State<FavoritePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('찜')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.white,
+        title: const Text('찜'),
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _favorites.isEmpty
-              ? const Center(child: Text('찜한 장소가 없습니다.'))
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                  itemBuilder: (context, index) {
-                    final item = _favorites[index];
-                    final title = '${item['title'] ?? '이름 없음'}';
-                    final address = '${item['addr1'] ?? ''}';
-                    return Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE5E5E5)),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0F000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
+          ? const Center(child: Text('찜한 장소가 없습니다.'))
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              itemBuilder: (context, index) {
+                final item = _favorites[index];
+                final title = '${item['title'] ?? '이름 없음'}';
+                final address = '${item['addr1'] ?? ''}';
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE5E5E5)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0F000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
                       ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => HomeDetailPage(item: item),
-                            ),
-                          );
-                          await _loadFavorites();
-                        },
-                        child: Column(
+                    ],
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => HomeDetailPage(item: item),
+                        ),
+                      );
+                      await _loadFavorites();
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        title,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        address.isEmpty
-                                            ? '주소 정보 없음'
-                                            : address,
-                                        style: const TextStyle(
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  onPressed: () => _removeFavorite(item),
-                                  icon: const Icon(Icons.favorite),
-                                  color: Colors.redAccent,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: _NetworkImageWithFallback(
-                                imageUrl: '${item['firstimage'] ?? ''}',
-                                height: 160,
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    address.isEmpty ? '주소 정보 없음' : address,
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () => _removeFavorite(item),
+                              icon: const Icon(Icons.favorite),
+                              color: Colors.redAccent,
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemCount: _favorites.length,
-                ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: _NetworkImageWithFallback(
+                            imageUrl: '${item['firstimage'] ?? ''}',
+                            height: 160,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemCount: _favorites.length,
+            ),
     );
   }
 }

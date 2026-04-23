@@ -116,18 +116,21 @@ class _MyPageState extends State<MyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.white,
+        title: const Text('마이'),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 12),
-              const Text(
-                '마이',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: () => _logout(context),
                 style: OutlinedButton.styleFrom(

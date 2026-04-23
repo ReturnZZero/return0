@@ -43,10 +43,12 @@ class _AiChatPageState extends State<AiChatPage>
     _scrollToBottom();
     try {
       final history = _messages
-          .map((m) => {
-                'role': m.role == _ChatRole.user ? 'user' : 'assistant',
-                'content': m.content,
-              })
+          .map(
+            (m) => {
+              'role': m.role == _ChatRole.user ? 'user' : 'assistant',
+              'content': m.content,
+            },
+          )
           .toList();
 
       final reply = await _openAiService.sendMessage(messages: history);
@@ -62,9 +64,9 @@ class _AiChatPageState extends State<AiChatPage>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -89,7 +91,15 @@ class _AiChatPageState extends State<AiChatPage>
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('AI 채팅')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.white,
+        title: const Text('AI 채팅'),
+      ),
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusScope.of(context).unfocus(),
@@ -107,8 +117,9 @@ class _AiChatPageState extends State<AiChatPage>
                   final message = _messages[index];
                   final isUser = message.role == _ChatRole.user;
                   return Align(
-                    alignment:
-                        isUser ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment: isUser
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.symmetric(vertical: 6),
                       padding: const EdgeInsets.symmetric(
@@ -162,15 +173,15 @@ class _AiChatPageState extends State<AiChatPage>
                       ),
                     ),
                     const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () {
-                            FocusScope.of(context).unfocus();
-                            _sendMessage();
-                          },
-                    child: const Text('전송'),
-                  ),
+                    ElevatedButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              FocusScope.of(context).unfocus();
+                              _sendMessage();
+                            },
+                      child: const Text('전송'),
+                    ),
                   ],
                 ),
               ),
