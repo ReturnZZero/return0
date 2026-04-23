@@ -57,6 +57,21 @@ class MapService {
     );
   }
 
+  Future<List<Map<String, dynamic>>> fetchNearbyItemsFromTourApi({
+    required LatLng current,
+    int radius = 20000,
+    String? lDongRegnCd,
+    String? lDongSignguCd,
+  }) async {
+    return _korTourService.fetchLocationBasedList(
+      mapX: current.longitude,
+      mapY: current.latitude,
+      radius: radius,
+      lDongRegnCd: lDongRegnCd,
+      lDongSignguCd: lDongSignguCd,
+    );
+  }
+
   Future<List<Marker>> fetchNearbyMarkers({
     required LatLng current,
     int radius = 20000,

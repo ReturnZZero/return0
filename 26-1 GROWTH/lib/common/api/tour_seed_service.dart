@@ -60,7 +60,7 @@ class TourSeedService {
 
       List<Map<String, dynamic>> items;
       try {
-        items = await _mapService.fetchNearbyItems(
+        items = await _mapService.fetchNearbyItemsFromTourApi(
           current: center,
           radius: 20000,
           lDongRegnCd: region.sidoCode,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,7 +13,9 @@ class FavoriteService {
 
   Future<List<Map<String, dynamic>>> loadFavorites() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_key);
+    final storageKey = _scopedKey(_key);
+    await _migrateLegacyFavoritesIfNeeded(prefs, storageKey);
+    final raw = prefs.getString(storageKey);
     if (raw == null || raw.isEmpty) {
       return [];
     }
@@ -31,7 +34,7 @@ class FavoriteService {
     final normalized = favorites
         .map((item) => _normalizeForStorage(item))
         .toList();
-    await prefs.setString(_key, jsonEncode(normalized));
+    await prefs.setString(_scopedKey(_key), jsonEncode(normalized));
   }
 
   Future<bool> isFavorite(String id) async {
@@ -79,6 +82,29 @@ class FavoriteService {
       return value.map(_normalizeValue).toList();
     }
     return value;
+  }
+
+  String _scopedKey(String baseKey) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    return '${baseKey}_$uid';
+  }
+
+  Future<void> _migrateLegacyFavoritesIfNeeded(
+    SharedPreferences prefs,
+    String storageKey,
+  ) async {
+    if (prefs.containsKey(storageKey) || !prefs.containsKey(_key)) {
+      return;
+    }
+
+    final legacyRaw = prefs.getString(_key);
+    if (legacyRaw == null || legacyRaw.isEmpty) {
+      await prefs.remove(_key);
+      return;
+    }
+
+    await prefs.setString(storageKey, legacyRaw);
+    await prefs.remove(_key);
   }
 
   static String itemId(Map<String, dynamic> item) {

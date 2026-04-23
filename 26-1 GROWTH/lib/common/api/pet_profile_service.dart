@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,12 +14,18 @@ class PetProfileService {
 
   Future<List<Map<String, dynamic>>> loadPetProfiles() async {
     final prefs = await SharedPreferences.getInstance();
-    final migrated = await _migrateLegacyProfileIfNeeded(prefs);
+    final petProfilesKey = _scopedKey(_petProfilesKey);
+    final selectedPetIdKey = _scopedKey(_selectedPetIdKey);
+    final migrated = await _migrateLegacyProfileIfNeeded(
+      prefs,
+      petProfilesKey: petProfilesKey,
+      selectedPetIdKey: selectedPetIdKey,
+    );
     if (migrated != null) {
       return migrated;
     }
 
-    final raw = prefs.getString(_petProfilesKey);
+    final raw = prefs.getString(petProfilesKey);
     if (raw == null || raw.isEmpty) {
       return [];
     }
@@ -53,12 +60,12 @@ class PetProfileService {
 
   Future<String?> loadSelectedPetId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_selectedPetIdKey);
+    return prefs.getString(_scopedKey(_selectedPetIdKey));
   }
 
   Future<void> setSelectedPetId(String id) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_selectedPetIdKey, id);
+    await prefs.setString(_scopedKey(_selectedPetIdKey), id);
   }
 
   Future<Map<String, dynamic>> upsertPetProfile(
@@ -66,6 +73,8 @@ class PetProfileService {
   ) async {
     final prefs = await SharedPreferences.getInstance();
     final profiles = await loadPetProfiles();
+    final petProfilesKey = _scopedKey(_petProfilesKey);
+    final selectedPetIdKey = _scopedKey(_selectedPetIdKey);
 
     final normalized = _normalizePetProfile(profile);
     final id = '${normalized['id'] ?? ''}'.trim().isEmpty
@@ -83,14 +92,16 @@ class PetProfileService {
       profiles.add(normalized);
     }
 
-    await prefs.setString(_petProfilesKey, jsonEncode(profiles));
-    await prefs.setString(_selectedPetIdKey, id);
+    await prefs.setString(petProfilesKey, jsonEncode(profiles));
+    await prefs.setString(selectedPetIdKey, id);
     return normalized;
   }
 
   Future<void> deletePetProfile(String id) async {
     final prefs = await SharedPreferences.getInstance();
     final profiles = await loadPetProfiles();
+    final petProfilesKey = _scopedKey(_petProfilesKey);
+    final selectedPetIdKey = _scopedKey(_selectedPetIdKey);
     final index = profiles.indexWhere((item) => '${item['id'] ?? ''}' == id);
     if (index < 0) {
       return;
@@ -105,14 +116,14 @@ class PetProfileService {
       }
     }
 
-    await prefs.setString(_petProfilesKey, jsonEncode(profiles));
+    await prefs.setString(petProfilesKey, jsonEncode(profiles));
 
-    final selectedId = prefs.getString(_selectedPetIdKey);
+    final selectedId = prefs.getString(selectedPetIdKey);
     if (selectedId == id) {
       if (profiles.isEmpty) {
-        await prefs.remove(_selectedPetIdKey);
+        await prefs.remove(selectedPetIdKey);
       } else {
-        await prefs.setString(_selectedPetIdKey, '${profiles.first['id']}');
+        await prefs.setString(selectedPetIdKey, '${profiles.first['id']}');
       }
     }
   }
@@ -139,6 +150,11 @@ class PetProfileService {
 
     final savedFile = await File(sourcePath).copy(targetPath);
     return savedFile.path;
+  }
+
+  String _scopedKey(String baseKey) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    return '${baseKey}_$uid';
   }
 
   Map<String, dynamic> _normalizePetProfile(Map<String, dynamic> profile) {
@@ -274,10 +290,29 @@ class PetProfileService {
   }
 
   Future<List<Map<String, dynamic>>?> _migrateLegacyProfileIfNeeded(
-    SharedPreferences prefs,
-  ) async {
-    if (prefs.containsKey(_petProfilesKey)) {
+    SharedPreferences prefs, {
+    required String petProfilesKey,
+    required String selectedPetIdKey,
+  }) async {
+    if (prefs.containsKey(petProfilesKey)) {
       return null;
+    }
+
+    if (prefs.containsKey(_petProfilesKey)) {
+      final rawProfiles = prefs.getString(_petProfilesKey);
+      if (rawProfiles != null && rawProfiles.isNotEmpty) {
+        await prefs.setString(petProfilesKey, rawProfiles);
+      }
+
+      final selectedId = prefs.getString(_selectedPetIdKey);
+      if (selectedId != null && selectedId.isNotEmpty) {
+        await prefs.setString(selectedPetIdKey, selectedId);
+      }
+
+      await prefs.remove(_petProfilesKey);
+      await prefs.remove(_selectedPetIdKey);
+
+      return loadPetProfiles();
     }
 
     final raw = prefs.getString(_legacyPetProfileKey);
@@ -295,8 +330,8 @@ class PetProfileService {
         '${profile['id'] ?? 'pet_${DateTime.now().millisecondsSinceEpoch}'}';
     final profiles = [_normalizePetProfile(profile)];
 
-    await prefs.setString(_petProfilesKey, jsonEncode(profiles));
-    await prefs.setString(_selectedPetIdKey, '${profile['id']}');
+    await prefs.setString(petProfilesKey, jsonEncode(profiles));
+    await prefs.setString(selectedPetIdKey, '${profile['id']}');
     await prefs.remove(_legacyPetProfileKey);
     return profiles;
   }
