@@ -455,8 +455,10 @@ class _HomePageState extends State<HomePage> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(24),
                   onTap: () async {
-                    await _selectPet(profile);
-                    if (!mounted) {
+                    final isSelected =
+                        '${profile['id'] ?? ''}' == _selectedPetId;
+                    if (!isSelected) {
+                      await _selectPet(profile);
                       return;
                     }
                     await _openPetRegistration(initialData: profile);
