@@ -67,7 +67,7 @@ class PetProfileService {
     final prefs = await SharedPreferences.getInstance();
     final profiles = await loadPetProfiles();
 
-    final normalized = Map<String, dynamic>.from(profile);
+    final normalized = _normalizePetProfile(profile);
     final id = '${normalized['id'] ?? ''}'.trim().isEmpty
         ? 'pet_${DateTime.now().millisecondsSinceEpoch}'
         : '${normalized['id']}';
@@ -75,7 +75,10 @@ class PetProfileService {
 
     final index = profiles.indexWhere((item) => '${item['id'] ?? ''}' == id);
     if (index >= 0) {
-      profiles[index] = normalized;
+      profiles[index] = {
+        ..._normalizePetProfile(profiles[index]),
+        ...normalized,
+      };
     } else {
       profiles.add(normalized);
     }
@@ -138,6 +141,138 @@ class PetProfileService {
     return savedFile.path;
   }
 
+  Map<String, dynamic> _normalizePetProfile(Map<String, dynamic> profile) {
+    final normalized = Map<String, dynamic>.from(profile);
+
+    final petName = '${normalized['petName'] ?? normalized['name'] ?? ''}'
+        .trim();
+    final petAge = _parseInt(normalized['petAge'] ?? normalized['age']);
+    final petGender = _normalizePetGender(
+      normalized['petGender'] ?? normalized['gender'],
+    );
+    final isNeutered = normalized['isNeutered'] == true;
+    final petBread = '${normalized['petBread'] ?? normalized['breed'] ?? ''}'
+        .trim();
+    final isFierceDog =
+        normalized['isFierceDog'] == true ||
+        normalized['isDangerousBreed'] == true;
+    final petWeight = _parseDouble(
+      normalized['petWeight'] ?? normalized['weightKg'],
+    );
+    final petSize = _normalizePetSize(
+      normalized['petSize'] ?? _sizeFromWeight(petWeight),
+    );
+    final activityLevel = _normalizeActivityLevel(normalized['activityLevel']);
+    final travelChecklist = _normalizeTravelChecklist(
+      normalized['travelChecklist'],
+    );
+    final isOffLeash = normalized['isOffLeash'] == true;
+    final indoorAllowed = normalized['indoorAllowed'] == true;
+    final parkingAvailable = normalized['parkingAvailable'] == true;
+    final imagePath = '${normalized['imagePath'] ?? ''}'.trim();
+
+    return {
+      ...normalized,
+      'petName': petName,
+      'petAge': petAge,
+      'petGender': petGender,
+      'isNeutered': isNeutered,
+      'petBread': petBread,
+      'isFierceDog': isFierceDog,
+      'petWeight': petWeight,
+      'petSize': petSize,
+      'activityLevel': activityLevel,
+      'travelChecklist': travelChecklist,
+      'isOffLeash': isOffLeash,
+      'indoorAllowed': indoorAllowed,
+      'parkingAvailable': parkingAvailable,
+      'imagePath': imagePath,
+    };
+  }
+
+  int? _parseInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value == null) {
+      return null;
+    }
+    return int.tryParse('$value'.trim());
+  }
+
+  double? _parseDouble(dynamic value) {
+    if (value is double) {
+      return value;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value == null) {
+      return null;
+    }
+    return double.tryParse('$value'.trim());
+  }
+
+  String _normalizePetGender(dynamic value) {
+    final raw = '$value'.trim().toUpperCase();
+    if (raw == 'F' || raw == 'FEMALE') {
+      return 'F';
+    }
+    return 'M';
+  }
+
+  String _normalizePetSize(dynamic value) {
+    final raw = '$value'.trim().toUpperCase();
+    if (raw == 'S' || raw == 'SMALL') {
+      return 'S';
+    }
+    if (raw == 'M' || raw == 'MEDIUM') {
+      return 'M';
+    }
+    if (raw == 'L' || raw == 'LARGE') {
+      return 'L';
+    }
+    return '';
+  }
+
+  String _normalizeActivityLevel(dynamic value) {
+    final raw = '$value'.trim().toUpperCase();
+    if (raw == 'L' || raw == 'LOW') {
+      return 'L';
+    }
+    if (raw == 'H' || raw == 'HIGH') {
+      return 'H';
+    }
+    return 'M';
+  }
+
+  List<String> _normalizeTravelChecklist(dynamic value) {
+    if (value is! List) {
+      return [];
+    }
+    return value
+        .map((item) => '$item'.trim())
+        .where((item) => item.isNotEmpty)
+        .take(3)
+        .toList();
+  }
+
+  String _sizeFromWeight(double? weight) {
+    if (weight == null) {
+      return '';
+    }
+    if (weight < 10) {
+      return 'S';
+    }
+    if (weight < 25) {
+      return 'M';
+    }
+    return 'L';
+  }
+
   Future<List<Map<String, dynamic>>?> _migrateLegacyProfileIfNeeded(
     SharedPreferences prefs,
   ) async {
@@ -158,7 +293,7 @@ class PetProfileService {
     final profile = Map<String, dynamic>.from(decoded);
     profile['id'] =
         '${profile['id'] ?? 'pet_${DateTime.now().millisecondsSinceEpoch}'}';
-    final profiles = [profile];
+    final profiles = [_normalizePetProfile(profile)];
 
     await prefs.setString(_petProfilesKey, jsonEncode(profiles));
     await prefs.setString(_selectedPetIdKey, '${profile['id']}');
