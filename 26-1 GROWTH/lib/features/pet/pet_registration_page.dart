@@ -61,20 +61,27 @@ class _PetRegistrationPageState extends State<PetRegistrationPage> {
       return;
     }
 
-    _nameController.text = '${data['name'] ?? ''}'.trim();
-    _ageController.text = '${data['age'] ?? ''}'.trim();
-    _breedController.text = '${data['breed'] ?? ''}'.trim();
-    _weightController.text = '${data['weightKg'] ?? ''}'.trim();
+    _nameController.text = '${data['petName'] ?? data['name'] ?? ''}'.trim();
+    _ageController.text = '${data['petAge'] ?? data['age'] ?? ''}'.trim();
+    _breedController.text = '${data['petBread'] ?? data['breed'] ?? ''}'.trim();
+    _weightController.text = '${data['petWeight'] ?? data['weightKg'] ?? ''}'
+        .trim();
 
-    final gender = '${data['gender'] ?? ''}'.trim().toLowerCase();
-    _gender = gender == 'female' ? PetGender.female : PetGender.male;
+    final gender = '${data['petGender'] ?? data['gender'] ?? ''}'
+        .trim()
+        .toUpperCase();
+    _gender = gender == 'F' || gender == 'FEMALE'
+        ? PetGender.female
+        : PetGender.male;
 
-    final activity = '${data['activityLevel'] ?? ''}'.trim().toLowerCase();
+    final activity = '${data['activityLevel'] ?? ''}'.trim().toUpperCase();
     switch (activity) {
-      case 'low':
+      case 'L':
+      case 'LOW':
         _activityLevel = PetActivityLevel.low;
         break;
-      case 'high':
+      case 'H':
+      case 'HIGH':
         _activityLevel = PetActivityLevel.high;
         break;
       default:
@@ -82,7 +89,8 @@ class _PetRegistrationPageState extends State<PetRegistrationPage> {
     }
 
     _isNeutered = data['isNeutered'] == true;
-    _isDangerousBreed = data['isDangerousBreed'] == true;
+    _isDangerousBreed =
+        data['isFierceDog'] == true || data['isDangerousBreed'] == true;
     _isOffLeash = data['isOffLeash'] == true;
     _indoorAllowed = data['indoorAllowed'] == true;
     _parkingAvailable = data['parkingAvailable'] == true;
@@ -131,16 +139,28 @@ class _PetRegistrationPageState extends State<PetRegistrationPage> {
         .toList();
 
     final payload = <String, dynamic>{
-      ...?widget.initialData,
-      'name': _nameController.text.trim(),
-      'age': int.parse(_ageController.text.trim()),
-      'gender': _gender.name,
+      if (widget.initialData?['id'] != null) 'id': widget.initialData!['id'],
+      if (widget.initialData?['imagePath'] != null)
+        'imagePath': widget.initialData!['imagePath'],
+      'petName': _nameController.text.trim(),
+      'petAge': int.parse(_ageController.text.trim()),
+      'petGender': _gender == PetGender.male ? 'M' : 'F',
       'isNeutered': _isNeutered,
-      'breed': _breedController.text.trim(),
-      'isDangerousBreed': _isDangerousBreed,
-      'weightKg': _weightKg,
-      'size': _size,
-      'activityLevel': _activityLevel.name,
+      'petBread': _breedController.text.trim(),
+      'isFierceDog': _isDangerousBreed,
+      'petWeight': _weightKg,
+      'petSize': _size == 'Small'
+          ? 'S'
+          : _size == 'Medium'
+          ? 'M'
+          : _size == 'Large'
+          ? 'L'
+          : '',
+      'activityLevel': _activityLevel == PetActivityLevel.low
+          ? 'L'
+          : _activityLevel == PetActivityLevel.medium
+          ? 'M'
+          : 'H',
       'travelChecklist': travelNotes,
       'isOffLeash': _isOffLeash,
       'indoorAllowed': _indoorAllowed,

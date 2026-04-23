@@ -121,7 +121,8 @@ class _PetImageRegistrationPageState extends State<PetImageRegistrationPage> {
 
       final savedPath = await _petProfileService.savePetImage(
         sourcePath: pickedFile.path,
-        fileNamePrefix: '${widget.petData['name'] ?? 'pet'}',
+        fileNamePrefix:
+            '${widget.petData['petName'] ?? widget.petData['name'] ?? 'pet'}',
       );
 
       if (!mounted) {

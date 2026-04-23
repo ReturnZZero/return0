@@ -114,7 +114,11 @@ class _HomePageState extends State<HomePage> {
     }
     await _loadPetProfiles();
     messenger.showSnackBar(
-      SnackBar(content: Text('${result['name']} 등록을 완료했어요.')),
+      SnackBar(
+        content: Text(
+          '${result['petName'] ?? result['name'] ?? '반려동물'} 등록을 완료했어요.',
+        ),
+      ),
     );
   }
 
@@ -445,7 +449,8 @@ class _HomePageState extends State<HomePage> {
             final imagePath = '${profile['imagePath'] ?? ''}'.trim();
             final hasImageFile =
                 imagePath.isNotEmpty && File(imagePath).existsSync();
-            final petName = '${profile['name'] ?? '이름 없음'}';
+            final petName =
+                '${profile['petName'] ?? profile['name'] ?? '이름 없음'}';
             final isSelected = '${profile['id'] ?? ''}' == _selectedPetId;
 
             return SizedBox(
