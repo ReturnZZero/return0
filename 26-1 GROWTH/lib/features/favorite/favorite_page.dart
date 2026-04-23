@@ -11,10 +11,47 @@ class FavoritePage extends StatefulWidget {
 }
 
 class _FavoritePageState extends State<FavoritePage> {
+  static const List<String> _categoryOptions = [
+    '숙소',
+    '쇼핑',
+    '음식점',
+    '스포츠',
+    '체험관광',
+    '자연관광',
+    '문화관광',
+    '역사관광',
+  ];
+  static const Map<String, String> _categoryCodeMap = {
+    '숙소': 'AC',
+    '쇼핑': 'SH',
+    '음식점': 'FD',
+    '스포츠': 'LS',
+    '체험관광': 'EX',
+    '자연관광': 'NA',
+    '문화관광': 'VE',
+    '역사관광': 'HS',
+  };
+
   final _favoriteService = const FavoriteService();
   final List<Map<String, dynamic>> _favorites = [];
   bool _isLoading = false;
   late final VoidCallback _listener;
+  String? _selectedCategory;
+
+  List<Map<String, dynamic>> get _filteredFavorites {
+    final selectedCode = _selectedCategory == null
+        ? null
+        : _categoryCodeMap[_selectedCategory!];
+    if (selectedCode == null || selectedCode.isEmpty) {
+      return _favorites;
+    }
+
+    return _favorites.where((item) {
+      final lclsSystm1 = '${item['lclsSystm1'] ?? ''}'.trim().toUpperCase();
+      final placeType = '${item['placeType'] ?? ''}'.trim().toUpperCase();
+      return lclsSystm1 == selectedCode || placeType == selectedCode;
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -51,6 +88,9 @@ class _FavoritePageState extends State<FavoritePage> {
 
   @override
   Widget build(BuildContext context) {
+    const accentColor = Color(0xFFF4C84A);
+    final filteredFavorites = _filteredFavorites;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -63,88 +103,139 @@ class _FavoritePageState extends State<FavoritePage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _favorites.isEmpty
-          ? const Center(child: Text('찜한 장소가 없습니다.'))
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              itemBuilder: (context, index) {
-                final item = _favorites[index];
-                final title = '${item['title'] ?? '이름 없음'}';
-                final address = '${item['addr1'] ?? ''}';
-                return Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE5E5E5)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0F000000),
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => HomeDetailPage(item: item),
+          : Column(
+              children: [
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 44,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    scrollDirection: Axis.horizontal,
+                    itemBuilder: (context, index) {
+                      final label = _categoryOptions[index];
+                      final isSelected = _selectedCategory == label;
+                      return FilterChip(
+                        label: Text(label),
+                        selected: isSelected,
+                        showCheckmark: false,
+                        backgroundColor: Colors.white,
+                        selectedColor: accentColor.withOpacity(0.35),
+                        side: const BorderSide(color: accentColor),
+                        labelStyle: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
                         ),
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedCategory = _selectedCategory == label
+                                ? null
+                                : label;
+                          });
+                        },
                       );
-                      await _loadFavorites();
                     },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    address.isEmpty ? '주소 정보 없음' : address,
-                                    style: const TextStyle(
-                                      color: Colors.black54,
-                                    ),
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemCount: _categoryOptions.length,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _favorites.isEmpty
+                      ? const Center(child: Text('찜한 장소가 없습니다.'))
+                      : filteredFavorites.isEmpty
+                      ? const Center(child: Text('선택한 카테고리의 찜 장소가 없습니다.'))
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          itemBuilder: (context, index) {
+                            final item = filteredFavorites[index];
+                            final title = '${item['title'] ?? '이름 없음'}';
+                            final address = '${item['addr1'] ?? ''}';
+                            return Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(0xFFE5E5E5),
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0F000000),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
                                   ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () => _removeFavorite(item),
-                              icon: const Icon(Icons.favorite),
-                              color: Colors.redAccent,
-                            ),
-                          ],
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          HomeDetailPage(item: item),
+                                    ),
+                                  );
+                                  await _loadFavorites();
+                                },
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                title,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                address.isEmpty
+                                                    ? '주소 정보 없음'
+                                                    : address,
+                                                style: const TextStyle(
+                                                  color: Colors.black54,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        IconButton(
+                                          onPressed: () =>
+                                              _removeFavorite(item),
+                                          icon: const Icon(Icons.favorite),
+                                          color: Colors.redAccent,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: _NetworkImageWithFallback(
+                                        imageUrl: '${item['firstimage'] ?? ''}',
+                                        height: 160,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemCount: filteredFavorites.length,
                         ),
-                        const SizedBox(height: 10),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: _NetworkImageWithFallback(
-                            imageUrl: '${item['firstimage'] ?? ''}',
-                            height: 160,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemCount: _favorites.length,
+                ),
+              ],
             ),
     );
   }
