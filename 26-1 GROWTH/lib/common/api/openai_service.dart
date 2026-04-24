@@ -3,20 +3,21 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../constants/strings.dart';
+import 'google_geocoding_service.dart';
 
 class OpenAiService {
-  OpenAiService({http.Client? client}) : _client = client ?? http.Client();
+  OpenAiService({http.Client? client, GoogleGeocodingService? geocodingService})
+    : _client = client ?? http.Client(),
+      _geocodingService = geocodingService ?? const GoogleGeocodingService();
 
   final http.Client _client;
-  // 시스템 프롬프트: 사용자 질문에서 필터값 추출 규칙(개발자 확인용)
-  // 필드: mapX, mapY, petType, petSize, indoorAllowed, outdoorOnly, leashRequired, placeType, parkingAvailable
-  // 값 범위: 각 필드는 아래 프롬프트 규칙에 정의된 값만 허용
+  final GoogleGeocodingService _geocodingService;
   static const String _systemPrompt = '''
 당신은 반려동물 동반 여행 앱을 위한 도우미입니다.
 반드시 한국어로 답하세요. 항상 아래 형식으로 응답하세요:
 1) 짧은 자연어 답변 (1~2문장)
 2) 다음 줄에 JSON 객체 1개 (키는 정확히 아래와 동일, 순서도 유지)
-mapX, mapY, petType, petSize, indoorAllowed, outdoorOnly, leashRequired, placeType, parkingAvailable.
+mapX, mapY, petName, petAge, petGender, isNeutered, petBread, isFierceDog, petWeight, petSize, activityLevel, travelChecklist, isOffLeash, indoorAllowed, parkingAvailable.
 
 JSON 규칙:
 - mapX, mapY는 좌표(경도, 위도). 사용자가 지역을 언급하면 해당 지역의 중심 좌표를 넣어라.
@@ -24,25 +25,29 @@ JSON 규칙:
 - 예: "경기도 인근" → "경기도", "서울 근처" → "서울특별시"
 - 절대 mapX, mapY를 null로 두지 마라 (지역이 한 글자라도 있으면 반드시 좌표 반환)
 - 좌표를 알 수 없으면 대한민국 중심 좌표를 반환하라 (mapX=127.7669, mapY=35.9078)
-- 아래 값만 사용하세요:
-  petType: "dog" | "cat" | "all"
-  petSize: "small" | "medium" | "large" | "all"
-  indoorAllowed: true | false | "all"
-  outdoorOnly: true | false | "all"
-  leashRequired: true | false | "all"
-  placeType: "cafe" | "restaurant" | "park" | "beach" | "hotel" | "trail" | "camp" | "shop" | "all"
-  parkingAvailable: true | false | "all"
-- 사용자가 명시하지 않은 값은 기본값을 사용하세요:
-  mapX=null, mapY=null, petType="all", petSize="all", indoorAllowed="all", outdoorOnly="all",
-  leashRequired="all", placeType="all", parkingAvailable="all".
+- 반려동물 관련 필드는 "현재 선택된 반려동물 정보"를 최우선으로 사용하세요.
+- 사용자가 특정 반려동물 이름을 말하면 그 이름을 기준으로 이해하되, 제공된 선택 반려동물 정보와 충돌하면 선택 반려동물 정보를 우선하세요.
+- petGender는 "M" 또는 "F"만 사용하세요.
+- petSize는 "S" | "M" | "L"만 사용하세요.
+- activityLevel은 "L" | "M" | "H"만 사용하세요.
+- travelChecklist는 문자열 배열이며 최대 3개입니다.
+- bool 필드는 true, false, null 중 하나만 사용하세요.
+- 문자열 필드는 값이 없으면 null을 사용하세요.
+- 숫자 필드는 값이 없으면 null을 사용하세요.
+- travelChecklist 값이 없으면 빈 배열 []을 사용하세요.
+- 선택된 반려동물 정보가 주어졌다면, 사용자가 별도로 바꾸라고 하지 않는 한 그 값을 그대로 JSON에 반영하세요.
 - JSON의 정확성이 자연어 답변보다 우선이다.
 - 추가 키를 넣지 마세요. JSON을 코드블록으로 감싸지 마세요.
 ''';
 
   Future<String> sendMessage({
     required List<Map<String, String>> messages,
+    Map<String, dynamic>? selectedPetProfile,
     String model = 'gpt-4o-mini',
   }) async {
+    final selectedPetProfilePrompt = _buildSelectedPetProfilePrompt(
+      selectedPetProfile,
+    );
     final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
     final response = await _client.post(
       uri,
@@ -54,6 +59,7 @@ JSON 규칙:
         'model': model,
         'messages': [
           {'role': 'system', 'content': _systemPrompt},
+          {'role': 'system', 'content': selectedPetProfilePrompt},
           ...messages.map((m) => {'role': m['role'], 'content': m['content']}),
         ],
         'temperature': 0.7,
@@ -76,6 +82,168 @@ JSON 규칙:
       throw Exception('OpenAI 응답 파싱 실패');
     }
 
-    return content.trim();
+    return _applyGeocodedCoordinates(
+      content: content.trim(),
+      messages: messages,
+    );
+  }
+
+  Future<String> _applyGeocodedCoordinates({
+    required String content,
+    required List<Map<String, String>> messages,
+  }) async {
+    final regionText = _extractRegionText(messages);
+    if (regionText == null || regionText.isEmpty) {
+      return content;
+    }
+
+    final jsonRange = _findJsonRange(content);
+    if (jsonRange == null) {
+      return content;
+    }
+
+    try {
+      final jsonText = content.substring(jsonRange.$1, jsonRange.$2);
+      final decoded = jsonDecode(jsonText);
+      if (decoded is! Map) {
+        return content;
+      }
+
+      final geocoded = await _geocodingService.geocodeAddress(regionText);
+      final normalized = Map<String, dynamic>.from(decoded)
+        ..['mapX'] = geocoded['lng']
+        ..['mapY'] = geocoded['lat'];
+
+      return '${content.substring(0, jsonRange.$1)}${jsonEncode(normalized)}${content.substring(jsonRange.$2)}';
+    } catch (_) {
+      return content;
+    }
+  }
+
+  String _buildSelectedPetProfilePrompt(Map<String, dynamic>? profile) {
+    if (profile == null || profile.isEmpty) {
+      return '''
+현재 선택된 반려동물 정보가 없습니다.
+반려동물 관련 JSON 필드는 아래 기본값으로 채우세요.
+- petName: null
+- petAge: null
+- petGender: null
+- isNeutered: null
+- petBread: null
+- isFierceDog: null
+- petWeight: null
+- petSize: null
+- activityLevel: null
+- travelChecklist: []
+- isOffLeash: null
+- indoorAllowed: null
+- parkingAvailable: null
+''';
+    }
+
+    final normalized = <String, dynamic>{
+      'petName': profile['petName'],
+      'petAge': profile['petAge'],
+      'petGender': profile['petGender'],
+      'isNeutered': profile['isNeutered'],
+      'petBread': profile['petBread'],
+      'isFierceDog': profile['isFierceDog'],
+      'petWeight': profile['petWeight'],
+      'petSize': profile['petSize'],
+      'activityLevel': profile['activityLevel'],
+      'travelChecklist': profile['travelChecklist'] ?? const [],
+      'isOffLeash': profile['isOffLeash'],
+      'indoorAllowed': profile['indoorAllowed'],
+      'parkingAvailable': profile['parkingAvailable'],
+    };
+
+    return '''
+현재 선택된 반려동물 정보입니다. 사용자가 질문하면 아래 값을 기반으로 필터 JSON을 작성하세요.
+${jsonEncode(normalized)}
+''';
+  }
+
+  String? _extractRegionText(List<Map<String, String>> messages) {
+    final userMessages = messages.where((m) => m['role'] == 'user').toList();
+    if (userMessages.isEmpty) {
+      return null;
+    }
+
+    final latestUserText = '${userMessages.last['content'] ?? ''}'.trim();
+    if (latestUserText.isEmpty) {
+      return null;
+    }
+
+    final normalizedText = _normalizeRegionAliases(latestUserText);
+    final patterns = <RegExp>[
+      RegExp(r'([가-힣]+(?:특별시|광역시|특별자치시|도|특별자치도)\s*[가-힣]+(?:시|군|구))'),
+      RegExp(r'([가-힣]+(?:특별시|광역시|특별자치시|도|특별자치도))'),
+      RegExp(r'([가-힣]+(?:시|군|구))'),
+    ];
+
+    for (final pattern in patterns) {
+      final matches = pattern.allMatches(normalizedText).toList();
+      if (matches.isEmpty) {
+        continue;
+      }
+
+      final value =
+          matches
+              .map((match) => match.group(0)?.trim() ?? '')
+              .where((text) => text.isNotEmpty)
+              .toList()
+            ..sort((a, b) => b.length.compareTo(a.length));
+
+      if (value.isNotEmpty) {
+        return value.first.replaceAll(RegExp(r'\s+'), ' ');
+      }
+    }
+
+    return null;
+  }
+
+  String _normalizeRegionAliases(String text) {
+    final aliases = <String, String>{
+      '서울 ': '서울특별시 ',
+      '서울시 ': '서울특별시 ',
+      '부산 ': '부산광역시 ',
+      '부산시 ': '부산광역시 ',
+      '대구 ': '대구광역시 ',
+      '대구시 ': '대구광역시 ',
+      '인천 ': '인천광역시 ',
+      '인천시 ': '인천광역시 ',
+      '광주 ': '광주광역시 ',
+      '광주시 ': '광주광역시 ',
+      '대전 ': '대전광역시 ',
+      '대전시 ': '대전광역시 ',
+      '울산 ': '울산광역시 ',
+      '울산시 ': '울산광역시 ',
+      '세종 ': '세종특별자치시 ',
+      '세종시 ': '세종특별자치시 ',
+      '경기 ': '경기도 ',
+      '강원 ': '강원특별자치도 ',
+      '충북 ': '충청북도 ',
+      '충남 ': '충청남도 ',
+      '전북 ': '전북특별자치도 ',
+      '전남 ': '전라남도 ',
+      '경북 ': '경상북도 ',
+      '경남 ': '경상남도 ',
+      '제주 ': '제주특별자치도 ',
+    };
+
+    var normalized = ' $text ';
+    aliases.forEach((from, to) {
+      normalized = normalized.replaceAll(from, to);
+    });
+    return normalized.trim();
+  }
+
+  (int, int)? _findJsonRange(String content) {
+    final start = content.indexOf('{');
+    final end = content.lastIndexOf('}');
+    if (start < 0 || end < 0 || end <= start) {
+      return null;
+    }
+    return (start, end + 1);
   }
 }

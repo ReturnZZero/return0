@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../common/api/openai_service.dart';
+import '../../common/api/pet_profile_service.dart';
 
 class AiChatPage extends StatefulWidget {
   const AiChatPage({Key? key}) : super(key: key);
@@ -11,15 +14,19 @@ class AiChatPage extends StatefulWidget {
 
 class _AiChatPageState extends State<AiChatPage>
     with AutomaticKeepAliveClientMixin {
+  static const _prettyJsonEncoder = JsonEncoder.withIndent('  ');
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _openAiService = OpenAiService();
+  final _petProfileService = const PetProfileService();
   final List<_ChatMessage> _messages = [];
+  Map<String, dynamic>? _selectedPetProfile;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _loadSelectedPetProfile();
   }
 
   @override
@@ -51,13 +58,21 @@ class _AiChatPageState extends State<AiChatPage>
           )
           .toList();
 
-      final reply = await _openAiService.sendMessage(messages: history);
+      final reply = await _openAiService.sendMessage(
+        messages: history,
+        selectedPetProfile: _selectedPetProfile,
+      );
 
       if (!mounted) {
         return;
       }
       setState(() {
-        _messages.add(_ChatMessage(role: _ChatRole.assistant, content: reply));
+        _messages.add(
+          _ChatMessage(
+            role: _ChatRole.assistant,
+            content: _formatAssistantReply(reply),
+          ),
+        );
       });
       _scrollToBottom();
     } catch (e) {
@@ -72,6 +87,43 @@ class _AiChatPageState extends State<AiChatPage>
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _loadSelectedPetProfile() async {
+    final profile = await _petProfileService.loadSelectedPetProfile();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _selectedPetProfile = profile);
+  }
+
+  String _formatAssistantReply(String reply) {
+    final jsonRange = _findJsonRange(reply);
+    if (jsonRange == null) {
+      return reply;
+    }
+
+    try {
+      final jsonText = reply.substring(jsonRange.$1, jsonRange.$2);
+      final decoded = jsonDecode(jsonText);
+      final prettyJson = _prettyJsonEncoder.convert(decoded);
+      final prefix = reply.substring(0, jsonRange.$1).trimRight();
+      if (prefix.isEmpty) {
+        return prettyJson;
+      }
+      return '$prefix\n\n$prettyJson';
+    } catch (_) {
+      return reply;
+    }
+  }
+
+  (int, int)? _findJsonRange(String content) {
+    final start = content.indexOf('{');
+    final end = content.lastIndexOf('}');
+    if (start < 0 || end < 0 || end <= start) {
+      return null;
+    }
+    return (start, end + 1);
   }
 
   void _scrollToBottom() {
