@@ -204,6 +204,7 @@ class _AiChatPageState extends State<AiChatPage>
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () async {
+                      FocusScope.of(context).unfocus();
                       await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => HomeDetailPage(item: item),
