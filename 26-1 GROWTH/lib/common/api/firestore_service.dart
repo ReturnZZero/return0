@@ -131,6 +131,100 @@ class FirestoreService {
     return results;
   }
 
+  Future<List<Map<String, dynamic>>> recommendTourPlacesForAi({
+    required Map<String, dynamic> filters,
+    int radius = 20000,
+    int limit = 3,
+  }) async {
+    final mapX = _parseCoordinate(filters['mapX']);
+    final mapY = _parseCoordinate(filters['mapY']);
+    if (mapX == null || mapY == null) {
+      return [];
+    }
+
+    final requestedPetSize = _normalizeAiPetSize(
+      filters['petSize'],
+      petWeight: _parseCoordinate(filters['petWeight']),
+    );
+    final requestedPetType = _inferAiPetType(filters);
+    final requestedIndoorAllowed = _deriveIndoorAllowed(filters);
+    final requestedParkingAvailable = _deriveParkingAvailable(filters);
+    final requestedOffLeash = _deriveOffLeash(filters);
+    final requestedActivityLevel = _normalizeActivityLevel(
+      filters['activityLevel'],
+    );
+
+    final nearbyItems = await fetchNearbyTourPlaces(
+      center: LatLng(mapY, mapX),
+      radius: radius,
+      limit: 300,
+    );
+
+    final filtered =
+        nearbyItems.where((item) {
+          if (!_matchesAiPetType(item, requestedPetType)) {
+            return false;
+          }
+          if (!_matchesAiPetGender(item, filters['petGender'])) {
+            return false;
+          }
+          if (!_matchesAiNeutered(item, filters['isNeutered'])) {
+            return false;
+          }
+          if (!_matchesAiFierceDog(item, filters['isFierceDog'])) {
+            return false;
+          }
+          if (!_matchesAiPetSize(item, requestedPetSize)) {
+            return false;
+          }
+          if (!_matchesAiPetBread(item, filters['petBread'])) {
+            return false;
+          }
+          if (!_matchesAiPetAge(item, filters['petAge'])) {
+            return false;
+          }
+          if (!_matchesAiPetWeight(item, filters['petWeight'])) {
+            return false;
+          }
+          if (!_matchesAiTravelChecklist(item, filters['travelChecklist'])) {
+            return false;
+          }
+          if (!_matchesAiIndoorAllowed(item, requestedIndoorAllowed)) {
+            return false;
+          }
+          if (!_matchesAiParking(item, requestedParkingAvailable)) {
+            return false;
+          }
+          if (!_matchesAiOffLeash(item, requestedOffLeash)) {
+            return false;
+          }
+          return true;
+        }).toList()..sort(
+          (a, b) =>
+              _aiRecommendationScore(
+                b,
+                requestedActivityLevel: requestedActivityLevel,
+                requestedIndoorAllowed: requestedIndoorAllowed,
+                requestedParkingAvailable: requestedParkingAvailable,
+                requestedOffLeash: requestedOffLeash,
+              ).compareTo(
+                _aiRecommendationScore(
+                  a,
+                  requestedActivityLevel: requestedActivityLevel,
+                  requestedIndoorAllowed: requestedIndoorAllowed,
+                  requestedParkingAvailable: requestedParkingAvailable,
+                  requestedOffLeash: requestedOffLeash,
+                ),
+              ),
+        );
+
+    debugPrint(
+      'Firestore AI recommendation: filters=$filters, normalizedPetType=$requestedPetType, normalizedPetSize=$requestedPetSize, indoorAllowed=$requestedIndoorAllowed, parkingAvailable=$requestedParkingAvailable, offLeash=$requestedOffLeash, activityLevel=$requestedActivityLevel, matched=${filtered.length}',
+    );
+
+    return filtered.take(limit).toList();
+  }
+
   bool _matchesKeyword(Map<String, dynamic> item, String keyword) {
     if (keyword.isEmpty) {
       return true;
@@ -192,6 +286,292 @@ class FirestoreService {
     return double.tryParse('$value');
   }
 
+  bool _matchesAiPetSize(Map<String, dynamic> item, String? petSize) {
+    final requested = _normalizeAiPetSize(petSize);
+    if (requested.isEmpty) {
+      return true;
+    }
+
+    final placePetSize = '${item['petSize'] ?? ''}'.trim().toUpperCase();
+    if (placePetSize.isEmpty || placePetSize == 'all') {
+      return true;
+    }
+
+    return placePetSize == requested ||
+        (requested == 'S' && placePetSize == 'SMALL') ||
+        (requested == 'M' && placePetSize == 'MEDIUM') ||
+        (requested == 'L' && placePetSize == 'LARGE');
+  }
+
+  bool _matchesAiPetType(Map<String, dynamic> item, String? petType) {
+    final requested = '${petType ?? ''}'.trim().toLowerCase();
+    if (requested.isEmpty) {
+      return true;
+    }
+
+    final placePetType = '${item['petType'] ?? ''}'.trim().toLowerCase();
+    if (placePetType.isEmpty || placePetType == 'all') {
+      return true;
+    }
+
+    return placePetType == requested;
+  }
+
+  bool _matchesAiPetGender(Map<String, dynamic> item, dynamic petGender) {
+    final requested = '${petGender ?? ''}'.trim().toUpperCase();
+    if (requested.isEmpty) {
+      return true;
+    }
+    return '${item['petGender'] ?? ''}'.trim().toUpperCase() == requested;
+  }
+
+  bool _matchesAiNeutered(Map<String, dynamic> item, dynamic isNeutered) {
+    if (isNeutered is! bool) {
+      return true;
+    }
+    return item['isNeutered'] == isNeutered;
+  }
+
+  bool _matchesAiFierceDog(Map<String, dynamic> item, dynamic isFierceDog) {
+    if (isFierceDog is! bool) {
+      return true;
+    }
+    return item['isFierceDog'] == isFierceDog;
+  }
+
+  bool _matchesAiIndoorAllowed(Map<String, dynamic> item, bool? indoorAllowed) {
+    if (indoorAllowed != true) {
+      return true;
+    }
+    return item['indoorAllowed'] == true;
+  }
+
+  bool _matchesAiParking(Map<String, dynamic> item, bool? parkingAvailable) {
+    if (parkingAvailable != true) {
+      return true;
+    }
+    return item['parkingAvailable'] == true;
+  }
+
+  bool _matchesAiOffLeash(Map<String, dynamic> item, bool? isOffLeash) {
+    if (isOffLeash != true) {
+      return true;
+    }
+    final placeIsOffLeash = item['isOffLeash'];
+    if (placeIsOffLeash is bool) {
+      return placeIsOffLeash;
+    }
+    return item['leashRequired'] != true;
+  }
+
+  bool _matchesAiPetBread(Map<String, dynamic> item, dynamic petBread) {
+    final requested = '${petBread ?? ''}'.trim().toLowerCase();
+    if (requested.isEmpty) {
+      return true;
+    }
+    return '${item['petBread'] ?? ''}'.trim().toLowerCase() == requested;
+  }
+
+  bool _matchesAiPetAge(Map<String, dynamic> item, dynamic petAge) {
+    final requested = _parseCoordinate(petAge);
+    if (requested == null) {
+      return true;
+    }
+
+    final saved = _parseCoordinate(item['petAge']);
+    if (saved == null) {
+      return true;
+    }
+
+    return (saved - requested).abs() <= 2;
+  }
+
+  bool _matchesAiPetWeight(Map<String, dynamic> item, dynamic petWeight) {
+    final requested = _parseCoordinate(petWeight);
+    if (requested == null) {
+      return true;
+    }
+
+    final saved = _parseCoordinate(item['petWeight']);
+    if (saved == null) {
+      return true;
+    }
+
+    return (saved - requested).abs() <= 5;
+  }
+
+  bool _matchesAiTravelChecklist(
+    Map<String, dynamic> item,
+    dynamic travelChecklist,
+  ) {
+    final requested = _extractChecklist(travelChecklist);
+    if (requested.isEmpty) {
+      return true;
+    }
+
+    final saved = _extractChecklist(item['travelChecklist']);
+    if (saved.isEmpty) {
+      return false;
+    }
+
+    return requested.any(saved.contains);
+  }
+
+  String _normalizeAiPetSize(dynamic value, {double? petWeight}) {
+    final raw = '${value ?? ''}'.trim().toUpperCase();
+    if (raw == 'S' || raw == 'SMALL') {
+      return 'S';
+    }
+    if (raw == 'M' || raw == 'MEDIUM') {
+      return 'M';
+    }
+    if (raw == 'L' || raw == 'LARGE') {
+      return 'L';
+    }
+
+    if (petWeight != null) {
+      if (petWeight < 10) {
+        return 'S';
+      }
+      if (petWeight < 25) {
+        return 'M';
+      }
+      return 'L';
+    }
+
+    return '';
+  }
+
+  String? _inferAiPetType(Map<String, dynamic> filters) {
+    final breed = '${filters['petBread'] ?? ''}'.trim().toLowerCase();
+    if (breed.isEmpty) {
+      return null;
+    }
+
+    const catKeywords = [
+      '고양이',
+      '코리안숏헤어',
+      '러시안블루',
+      '샴',
+      '페르시안',
+      '벵갈',
+      '노르웨이숲',
+      '먼치킨',
+      '브리티시숏헤어',
+      '아비시니안',
+      '스코티시폴드',
+      '터키시앙고라',
+      '랙돌',
+      '메인쿤',
+    ];
+
+    for (final keyword in catKeywords) {
+      if (breed.contains(keyword.toLowerCase())) {
+        return 'cat';
+      }
+    }
+
+    return 'dog';
+  }
+
+  bool? _deriveIndoorAllowed(Map<String, dynamic> filters) {
+    final indoorAllowed = filters['indoorAllowed'];
+    if (indoorAllowed is bool) {
+      return indoorAllowed;
+    }
+
+    final checklist = _extractChecklist(filters['travelChecklist']);
+    if (checklist.any((item) => item.contains('실내'))) {
+      return true;
+    }
+
+    return null;
+  }
+
+  bool? _deriveParkingAvailable(Map<String, dynamic> filters) {
+    final parkingAvailable = filters['parkingAvailable'];
+    if (parkingAvailable is bool) {
+      return parkingAvailable;
+    }
+
+    final checklist = _extractChecklist(filters['travelChecklist']);
+    if (checklist.any((item) => item.contains('주차'))) {
+      return true;
+    }
+
+    return null;
+  }
+
+  bool? _deriveOffLeash(Map<String, dynamic> filters) {
+    final isOffLeash = filters['isOffLeash'];
+    if (isOffLeash is bool) {
+      return isOffLeash;
+    }
+
+    final checklist = _extractChecklist(filters['travelChecklist']);
+    if (checklist.any((item) => item.contains('목줄') || item.contains('리드줄'))) {
+      return false;
+    }
+
+    return null;
+  }
+
+  String _normalizeActivityLevel(dynamic value) {
+    final raw = '${value ?? ''}'.trim().toUpperCase();
+    if (raw == 'L' || raw == 'LOW') {
+      return 'L';
+    }
+    if (raw == 'H' || raw == 'HIGH') {
+      return 'H';
+    }
+    if (raw == 'M' || raw == 'MEDIUM') {
+      return 'M';
+    }
+    return '';
+  }
+
+  List<String> _extractChecklist(dynamic value) {
+    if (value is! List) {
+      return const [];
+    }
+
+    return value
+        .map((item) => '$item'.trim().toLowerCase())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  int _aiRecommendationScore(
+    Map<String, dynamic> item, {
+    required String requestedActivityLevel,
+    required bool? requestedIndoorAllowed,
+    required bool? requestedParkingAvailable,
+    required bool? requestedOffLeash,
+  }) {
+    var score = 0;
+
+    if (requestedActivityLevel == 'H' && item['outdoorOnly'] == true) {
+      score += 3;
+    }
+    if (requestedActivityLevel == 'L' && item['indoorAllowed'] == true) {
+      score += 3;
+    }
+    if (requestedActivityLevel == 'M') {
+      score += 1;
+    }
+    if (requestedIndoorAllowed == true && item['indoorAllowed'] == true) {
+      score += 2;
+    }
+    if (requestedParkingAvailable == true && item['parkingAvailable'] == true) {
+      score += 2;
+    }
+    if (requestedOffLeash == true && item['leashRequired'] != true) {
+      score += 2;
+    }
+
+    return score;
+  }
+
   Future<int> upsertTourPlaces(List<Map<String, dynamic>> places) async {
     if (places.isEmpty) {
       return 0;
@@ -204,8 +584,8 @@ class FirestoreService {
       final batch = _firestore.batch();
 
       for (final place in chunk) {
-        final documentId = '${place['contentId'] ?? place['contentid'] ?? ''}'
-            .trim();
+        final normalizedPlace = _normalizeTourPlaceForStorage(place);
+        final documentId = '${normalizedPlace['contentId'] ?? ''}'.trim();
         if (documentId.isEmpty) {
           continue;
         }
@@ -214,7 +594,7 @@ class FirestoreService {
             .collection(tourPlacesCollection)
             .doc(documentId);
         batch.set(docRef, {
-          ...place,
+          ...normalizedPlace,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         savedCount++;
@@ -224,5 +604,15 @@ class FirestoreService {
     }
 
     return savedCount;
+  }
+
+  Map<String, dynamic> _normalizeTourPlaceForStorage(
+    Map<String, dynamic> place,
+  ) {
+    final normalized = Map<String, dynamic>.from(place);
+    normalized.remove('contentid');
+    normalized.remove('mapx');
+    normalized.remove('mapy');
+    return normalized;
   }
 }

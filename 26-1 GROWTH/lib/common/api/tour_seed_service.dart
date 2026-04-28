@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -27,6 +29,7 @@ class TourSeedService {
 
   final MapService _mapService;
   final FirestoreService _firestoreService;
+  final Random _random = Random();
 
   Future<TourSeedResult> seedTourPlaces({
     SeedProgressCallback? onProgress,
@@ -150,23 +153,38 @@ class TourSeedService {
     required _RegionInfo region,
     required LatLng center,
   }) {
+    final normalizedItem = _normalizeRawItem(item);
     final contentId = _resolveContentId(item, region);
     final mapX = _parseDouble(item['mapx']) ?? _parseDouble(item['mapX']);
     final mapY = _parseDouble(item['mapy']) ?? _parseDouble(item['mapY']);
     final searchableText = _collectText(item);
+    final randomPetSize = _randomPetSize();
+    final randomPetWeight = _randomPetWeight(randomPetSize);
+    final randomPetType = _randomPetType(searchableText);
+    final randomPetBread = _randomPetBread(randomPetType);
 
     return {
-      ...item,
+      ...normalizedItem,
       'contentId': contentId,
       'mapX': mapX,
       'mapY': mapY,
-      'petType': _inferPetType(searchableText),
-      'petSize': _inferPetSize(searchableText),
-      'indoorAllowed': _inferIndoorAllowed(searchableText),
+      'petType': randomPetType,
+      'petName': null,
+      'petAge': _random.nextInt(15) + 1,
+      'petGender': _random.nextBool() ? 'M' : 'F',
+      'isNeutered': _random.nextBool(),
+      'petBread': randomPetBread,
+      'isFierceDog': _random.nextBool(),
+      'petWeight': randomPetWeight,
+      'petSize': randomPetSize,
+      'activityLevel': _randomActivityLevel(),
+      'travelChecklist': _randomTravelChecklist(),
+      'isOffLeash': _random.nextBool(),
+      'indoorAllowed': _random.nextBool(),
       'outdoorOnly': _inferOutdoorOnly(searchableText),
       'leashRequired': _inferLeashRequired(searchableText),
       'placeType': _inferPlaceType(item),
-      'parkingAvailable': _inferParkingAvailable(searchableText),
+      'parkingAvailable': _random.nextBool(),
       'seedRegionSidoCode': region.sidoCode,
       'seedRegionSidoName': region.sidoName,
       'seedRegionSigunguCode': region.sigunguCode,
@@ -186,6 +204,14 @@ class TourSeedService {
     final title = '${item['title'] ?? ''}'.trim();
     final address = '${item['addr1'] ?? ''}'.trim();
     return '${region.sidoCode}_${region.sigunguCode}_${title}_$address';
+  }
+
+  Map<String, dynamic> _normalizeRawItem(Map<String, dynamic> item) {
+    final normalized = Map<String, dynamic>.from(item);
+    normalized.remove('contentid');
+    normalized.remove('mapx');
+    normalized.remove('mapy');
+    return normalized;
   }
 
   double? _parseDouble(dynamic value) {
@@ -215,23 +241,6 @@ class TourSeedService {
     return 'all';
   }
 
-  String _inferPetSize(String text) {
-    if (text.contains('소형견')) {
-      return 'small';
-    }
-    if (text.contains('중형견')) {
-      return 'medium';
-    }
-    if (text.contains('대형견')) {
-      return 'large';
-    }
-    return 'all';
-  }
-
-  bool _inferIndoorAllowed(String text) {
-    return text.contains('실내');
-  }
-
   bool _inferOutdoorOnly(String text) {
     return text.contains('야외') && !text.contains('실내');
   }
@@ -257,11 +266,69 @@ class TourSeedService {
     return 'unknown';
   }
 
-  bool _inferParkingAvailable(String text) {
-    if (text.contains('주차 불가') || text.contains('주차불가')) {
-      return false;
+  String _randomPetType(String text) {
+    final inferred = _inferPetType(text);
+    if (inferred == 'dog' || inferred == 'cat') {
+      return inferred;
     }
-    return text.contains('주차');
+    return _random.nextBool() ? 'dog' : 'cat';
+  }
+
+  String _randomPetSize() {
+    const values = ['S', 'M', 'L'];
+    return values[_random.nextInt(values.length)];
+  }
+
+  double _randomPetWeight(String petSize) {
+    switch (petSize) {
+      case 'S':
+        return 2 + (_random.nextDouble() * 7);
+      case 'M':
+        return 10 + (_random.nextDouble() * 14);
+      case 'L':
+        return 25 + (_random.nextDouble() * 15);
+      default:
+        return 5 + (_random.nextDouble() * 20);
+    }
+  }
+
+  String _randomPetBread(String petType) {
+    const dogBreeds = [
+      '말티즈',
+      '푸들',
+      '포메라니안',
+      '비숑프리제',
+      '웰시코기',
+      '시바견',
+      '리트리버',
+      '진돗개',
+      '시추',
+    ];
+    const catBreeds = [
+      '코리안숏헤어',
+      '러시안블루',
+      '샴',
+      '페르시안',
+      '벵갈',
+      '랙돌',
+      '노르웨이숲',
+      '브리티시숏헤어',
+    ];
+
+    final source = petType == 'cat' ? catBreeds : dogBreeds;
+    return source[_random.nextInt(source.length)];
+  }
+
+  String _randomActivityLevel() {
+    const values = ['L', 'M', 'H'];
+    return values[_random.nextInt(values.length)];
+  }
+
+  List<String> _randomTravelChecklist() {
+    const options = ['실내', '주차', '목줄', '야외', '대형견 가능', '중성화 확인'];
+    final shuffled = [...options]..shuffle(_random);
+    final count = _random.nextInt(4);
+    return shuffled.take(count).toList();
   }
 }
 

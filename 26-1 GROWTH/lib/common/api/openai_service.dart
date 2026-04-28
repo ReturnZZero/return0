@@ -25,8 +25,9 @@ JSON 규칙:
 - 예: "경기도 인근" → "경기도", "서울 근처" → "서울특별시"
 - 절대 mapX, mapY를 null로 두지 마라 (지역이 한 글자라도 있으면 반드시 좌표 반환)
 - 좌표를 알 수 없으면 대한민국 중심 좌표를 반환하라 (mapX=127.7669, mapY=35.9078)
-- 반려동물 관련 필드는 "현재 선택된 반려동물 정보"를 최우선으로 사용하세요.
-- 사용자가 특정 반려동물 이름을 말하면 그 이름을 기준으로 이해하되, 제공된 선택 반려동물 정보와 충돌하면 선택 반려동물 정보를 우선하세요.
+- 반려동물 관련 필드는 사용자가 질문 안에서 특정 반려동물 이름을 명시했을 때만 채우세요.
+- 현재 선택된 반려동물 정보가 제공되더라도, 질문에 그 반려동물 이름이 직접 등장하지 않으면 반려동물 관련 필드는 자동으로 채우지 마세요.
+- 사용자가 특정 반려동물 이름을 말하면 그 이름을 기준으로 이해하고, 제공된 선택 반려동물 정보와 이름이 일치할 때만 그 값을 JSON에 반영하세요.
 - petGender는 "M" 또는 "F"만 사용하세요.
 - petSize는 "S" | "M" | "L"만 사용하세요.
 - activityLevel은 "L" | "M" | "H"만 사용하세요.
@@ -35,7 +36,6 @@ JSON 규칙:
 - 문자열 필드는 값이 없으면 null을 사용하세요.
 - 숫자 필드는 값이 없으면 null을 사용하세요.
 - travelChecklist 값이 없으면 빈 배열 []을 사용하세요.
-- 선택된 반려동물 정보가 주어졌다면, 사용자가 별도로 바꾸라고 하지 않는 한 그 값을 그대로 JSON에 반영하세요.
 - JSON의 정확성이 자연어 답변보다 우선이다.
 - 추가 키를 넣지 마세요. JSON을 코드블록으로 감싸지 마세요.
 ''';
@@ -45,8 +45,15 @@ JSON 규칙:
     Map<String, dynamic>? selectedPetProfile,
     String model = 'gpt-4o-mini',
   }) async {
+    final effectiveSelectedPetProfile =
+        _shouldUseSelectedPetProfile(
+          messages: messages,
+          profile: selectedPetProfile,
+        )
+        ? selectedPetProfile
+        : null;
     final selectedPetProfilePrompt = _buildSelectedPetProfilePrompt(
-      selectedPetProfile,
+      effectiveSelectedPetProfile,
     );
     final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
     final response = await _client.post(
@@ -141,8 +148,9 @@ JSON 규칙:
 ''';
     }
 
+    final petName = '${profile['petName'] ?? ''}'.trim();
     final normalized = <String, dynamic>{
-      'petName': profile['petName'],
+      'petName': petName,
       'petAge': profile['petAge'],
       'petGender': profile['petGender'],
       'isNeutered': profile['isNeutered'],
@@ -158,7 +166,10 @@ JSON 규칙:
     };
 
     return '''
-현재 선택된 반려동물 정보입니다. 사용자가 질문하면 아래 값을 기반으로 필터 JSON을 작성하세요.
+현재 선택된 반려동물 정보입니다.
+질문에 아래 반려동물 이름이 직접 포함될 때만 이 값을 사용하세요.
+- 선택된 반려동물 이름: ${petName.isEmpty ? '없음' : petName}
+질문에 이 이름이 없으면 반려동물 관련 JSON 필드는 null 또는 [] 기본값으로 유지하세요.
 ${jsonEncode(normalized)}
 ''';
   }
@@ -200,6 +211,32 @@ ${jsonEncode(normalized)}
     }
 
     return null;
+  }
+
+  bool _shouldUseSelectedPetProfile({
+    required List<Map<String, String>> messages,
+    Map<String, dynamic>? profile,
+  }) {
+    if (profile == null || profile.isEmpty) {
+      return false;
+    }
+
+    final petName = '${profile['petName'] ?? ''}'.trim();
+    if (petName.isEmpty) {
+      return false;
+    }
+
+    final userMessages = messages.where((m) => m['role'] == 'user').toList();
+    if (userMessages.isEmpty) {
+      return false;
+    }
+
+    final latestUserText = '${userMessages.last['content'] ?? ''}'.trim();
+    if (latestUserText.isEmpty) {
+      return false;
+    }
+
+    return latestUserText.contains(petName);
   }
 
   String _normalizeRegionAliases(String text) {

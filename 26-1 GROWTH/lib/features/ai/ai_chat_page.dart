@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../common/api/firestore_service.dart';
 import '../../common/api/openai_service.dart';
 import '../../common/api/pet_profile_service.dart';
 
@@ -19,6 +20,7 @@ class _AiChatPageState extends State<AiChatPage>
   final _scrollController = ScrollController();
   final _openAiService = OpenAiService();
   final _petProfileService = const PetProfileService();
+  final _firestoreService = FirestoreService();
   final List<_ChatMessage> _messages = [];
   Map<String, dynamic>? _selectedPetProfile;
   bool _isLoading = false;
@@ -62,6 +64,7 @@ class _AiChatPageState extends State<AiChatPage>
         messages: history,
         selectedPetProfile: _selectedPetProfile,
       );
+      final enhancedReply = await _appendFirestoreRecommendations(reply);
 
       if (!mounted) {
         return;
@@ -70,7 +73,7 @@ class _AiChatPageState extends State<AiChatPage>
         _messages.add(
           _ChatMessage(
             role: _ChatRole.assistant,
-            content: _formatAssistantReply(reply),
+            content: _formatAssistantReply(enhancedReply),
           ),
         );
       });
@@ -95,6 +98,54 @@ class _AiChatPageState extends State<AiChatPage>
       return;
     }
     setState(() => _selectedPetProfile = profile);
+  }
+
+  Future<String> _appendFirestoreRecommendations(String reply) async {
+    final jsonRange = _findJsonRange(reply);
+    if (jsonRange == null) {
+      return reply;
+    }
+
+    try {
+      final jsonText = reply.substring(jsonRange.$1, jsonRange.$2);
+      final decoded = jsonDecode(jsonText);
+      if (decoded is! Map) {
+        return reply;
+      }
+
+      final filters = Map<String, dynamic>.from(decoded);
+      final mapX = _asDouble(filters['mapX']);
+      final mapY = _asDouble(filters['mapY']);
+      if (mapX == null || mapY == null) {
+        return reply;
+      }
+
+      final recommendations = await _firestoreService.recommendTourPlacesForAi(
+        filters: filters,
+      );
+
+      if (recommendations.isEmpty) {
+        return '$reply\n\n추천 장소를 아직 찾지 못했어요.';
+      }
+
+      final buffer = StringBuffer(reply);
+      buffer.write('\n\n추천 장소 3곳:\n');
+      for (var i = 0; i < recommendations.length; i++) {
+        final item = recommendations[i];
+        final title = '${item['title'] ?? '이름 없음'}'.trim();
+        final address = '${item['addr1'] ?? '주소 정보 없음'}'.trim();
+        buffer.write('${i + 1}. $title');
+        if (address.isNotEmpty) {
+          buffer.write(' - $address');
+        }
+        if (i < recommendations.length - 1) {
+          buffer.write('\n');
+        }
+      }
+      return buffer.toString();
+    } catch (_) {
+      return reply;
+    }
   }
 
   String _formatAssistantReply(String reply) {
@@ -124,6 +175,16 @@ class _AiChatPageState extends State<AiChatPage>
       return null;
     }
     return (start, end + 1);
+  }
+
+  double? _asDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value == null) {
+      return null;
+    }
+    return double.tryParse('$value');
   }
 
   void _scrollToBottom() {
