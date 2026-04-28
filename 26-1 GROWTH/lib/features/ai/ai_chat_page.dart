@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../common/api/firestore_service.dart';
 import '../../common/api/openai_service.dart';
 import '../../common/api/pet_profile_service.dart';
+import '../home/home_detail_page.dart';
 
 class AiChatPage extends StatefulWidget {
   const AiChatPage({Key? key}) : super(key: key);
@@ -64,7 +65,7 @@ class _AiChatPageState extends State<AiChatPage>
         messages: history,
         selectedPetProfile: _selectedPetProfile,
       );
-      final enhancedReply = await _appendFirestoreRecommendations(reply);
+      final recommendations = await _fetchFirestoreRecommendations(reply);
 
       if (!mounted) {
         return;
@@ -73,7 +74,8 @@ class _AiChatPageState extends State<AiChatPage>
         _messages.add(
           _ChatMessage(
             role: _ChatRole.assistant,
-            content: _formatAssistantReply(enhancedReply),
+            content: _formatAssistantReply(reply),
+            recommendations: recommendations,
           ),
         );
       });
@@ -100,51 +102,31 @@ class _AiChatPageState extends State<AiChatPage>
     setState(() => _selectedPetProfile = profile);
   }
 
-  Future<String> _appendFirestoreRecommendations(String reply) async {
+  Future<List<Map<String, dynamic>>> _fetchFirestoreRecommendations(
+    String reply,
+  ) async {
     final jsonRange = _findJsonRange(reply);
     if (jsonRange == null) {
-      return reply;
+      return const [];
     }
 
     try {
       final jsonText = reply.substring(jsonRange.$1, jsonRange.$2);
       final decoded = jsonDecode(jsonText);
       if (decoded is! Map) {
-        return reply;
+        return const [];
       }
 
       final filters = Map<String, dynamic>.from(decoded);
       final mapX = _asDouble(filters['mapX']);
       final mapY = _asDouble(filters['mapY']);
       if (mapX == null || mapY == null) {
-        return reply;
+        return const [];
       }
 
-      final recommendations = await _firestoreService.recommendTourPlacesForAi(
-        filters: filters,
-      );
-
-      if (recommendations.isEmpty) {
-        return '$reply\n\n추천 장소를 아직 찾지 못했어요.';
-      }
-
-      final buffer = StringBuffer(reply);
-      buffer.write('\n\n추천 장소 3곳:\n');
-      for (var i = 0; i < recommendations.length; i++) {
-        final item = recommendations[i];
-        final title = '${item['title'] ?? '이름 없음'}'.trim();
-        final address = '${item['addr1'] ?? '주소 정보 없음'}'.trim();
-        buffer.write('${i + 1}. $title');
-        if (address.isNotEmpty) {
-          buffer.write(' - $address');
-        }
-        if (i < recommendations.length - 1) {
-          buffer.write('\n');
-        }
-      }
-      return buffer.toString();
+      return _firestoreService.recommendTourPlacesForAi(filters: filters);
     } catch (_) {
-      return reply;
+      return const [];
     }
   }
 
@@ -159,10 +141,17 @@ class _AiChatPageState extends State<AiChatPage>
       final decoded = jsonDecode(jsonText);
       final prettyJson = _prettyJsonEncoder.convert(decoded);
       final prefix = reply.substring(0, jsonRange.$1).trimRight();
+      final suffix = reply.substring(jsonRange.$2).trimLeft();
       if (prefix.isEmpty) {
-        return prettyJson;
+        if (suffix.isEmpty) {
+          return prettyJson;
+        }
+        return '$prettyJson\n\n$suffix';
       }
-      return '$prefix\n\n$prettyJson';
+      if (suffix.isEmpty) {
+        return '$prefix\n\n$prettyJson';
+      }
+      return '$prefix\n\n$prettyJson\n\n$suffix';
     } catch (_) {
       return reply;
     }
@@ -185,6 +174,95 @@ class _AiChatPageState extends State<AiChatPage>
       return null;
     }
     return double.tryParse('$value');
+  }
+
+  Widget _buildRecommendationCarousel(List<Map<String, dynamic>> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, top: 4, bottom: 10),
+          child: Text(
+            '추천 장소',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+        ),
+        SizedBox(
+          height: 248,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final title = '${item['title'] ?? '이름 없음'}';
+              final address = '${item['addr1'] ?? ''}';
+              return SizedBox(
+                width: 264,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => HomeDetailPage(item: item),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE5E5E5)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0F000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            address.isEmpty ? '주소 정보 없음' : address,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.black54),
+                          ),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: _NetworkImageWithFallback(
+                                imageUrl: '${item['firstimage'] ?? ''}',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   void _scrollToBottom() {
@@ -229,30 +307,44 @@ class _AiChatPageState extends State<AiChatPage>
                 itemBuilder: (context, index) {
                   final message = _messages[index];
                   final isUser = message.role == _ChatRole.user;
-                  return Align(
-                    alignment: isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+                  return Column(
+                    crossAxisAlignment: isUser
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      Align(
+                        alignment: isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isUser
+                                ? const Color(0xFFFFDE59)
+                                : const Color(0xFFF2F2F2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            message.content,
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                        ),
                       ),
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isUser
-                            ? const Color(0xFFFFDE59)
-                            : const Color(0xFFF2F2F2),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        message.content,
-                        style: const TextStyle(fontSize: 15),
-                      ),
-                    ),
+                      if (!isUser && message.recommendations.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6, bottom: 8),
+                          child: _buildRecommendationCarousel(
+                            message.recommendations,
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),
@@ -312,8 +404,43 @@ class _AiChatPageState extends State<AiChatPage>
 enum _ChatRole { user, assistant }
 
 class _ChatMessage {
-  _ChatMessage({required this.role, required this.content});
+  _ChatMessage({
+    required this.role,
+    required this.content,
+    this.recommendations = const [],
+  });
 
   final _ChatRole role;
   final String content;
+  final List<Map<String, dynamic>> recommendations;
+}
+
+class _NetworkImageWithFallback extends StatelessWidget {
+  const _NetworkImageWithFallback({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.isEmpty || imageUrl == 'null') {
+      return Image.asset(
+        'assets/img_default.png',
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) {
+        return Image.asset(
+          'assets/img_default.png',
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
+      },
+    );
+  }
 }

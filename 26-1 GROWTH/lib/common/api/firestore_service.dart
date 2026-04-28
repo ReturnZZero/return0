@@ -136,22 +136,25 @@ class FirestoreService {
     int radius = 20000,
     int limit = 3,
   }) async {
-    final mapX = _parseCoordinate(filters['mapX']);
-    final mapY = _parseCoordinate(filters['mapY']);
+    final normalizedFilters = _normalizeAiFilters(filters);
+    final mapX = _parseCoordinate(normalizedFilters['mapX']);
+    final mapY = _parseCoordinate(normalizedFilters['mapY']);
     if (mapX == null || mapY == null) {
       return [];
     }
 
     final requestedPetSize = _normalizeAiPetSize(
-      filters['petSize'],
-      petWeight: _parseCoordinate(filters['petWeight']),
+      normalizedFilters['petSize'],
+      petWeight: _parseCoordinate(normalizedFilters['petWeight']),
     );
-    final requestedPetType = _inferAiPetType(filters);
-    final requestedIndoorAllowed = _deriveIndoorAllowed(filters);
-    final requestedParkingAvailable = _deriveParkingAvailable(filters);
-    final requestedOffLeash = _deriveOffLeash(filters);
+    final requestedPetType = _inferAiPetType(normalizedFilters);
+    final requestedIndoorAllowed = _deriveIndoorAllowed(normalizedFilters);
+    final requestedParkingAvailable = _deriveParkingAvailable(
+      normalizedFilters,
+    );
+    final requestedOffLeash = _deriveOffLeash(normalizedFilters);
     final requestedActivityLevel = _normalizeActivityLevel(
-      filters['activityLevel'],
+      normalizedFilters['activityLevel'],
     );
 
     final nearbyItems = await fetchNearbyTourPlaces(
@@ -160,33 +163,36 @@ class FirestoreService {
       limit: 300,
     );
 
-    final filtered =
+    final strictMatches =
         nearbyItems.where((item) {
           if (!_matchesAiPetType(item, requestedPetType)) {
             return false;
           }
-          if (!_matchesAiPetGender(item, filters['petGender'])) {
+          if (!_matchesAiPetGender(item, normalizedFilters['petGender'])) {
             return false;
           }
-          if (!_matchesAiNeutered(item, filters['isNeutered'])) {
+          if (!_matchesAiNeutered(item, normalizedFilters['isNeutered'])) {
             return false;
           }
-          if (!_matchesAiFierceDog(item, filters['isFierceDog'])) {
+          if (!_matchesAiFierceDog(item, normalizedFilters['isFierceDog'])) {
             return false;
           }
           if (!_matchesAiPetSize(item, requestedPetSize)) {
             return false;
           }
-          if (!_matchesAiPetBread(item, filters['petBread'])) {
+          if (!_matchesAiPetBread(item, normalizedFilters['petBread'])) {
             return false;
           }
-          if (!_matchesAiPetAge(item, filters['petAge'])) {
+          if (!_matchesAiPetAge(item, normalizedFilters['petAge'])) {
             return false;
           }
-          if (!_matchesAiPetWeight(item, filters['petWeight'])) {
+          if (!_matchesAiPetWeight(item, normalizedFilters['petWeight'])) {
             return false;
           }
-          if (!_matchesAiTravelChecklist(item, filters['travelChecklist'])) {
+          if (!_matchesAiTravelChecklist(
+            item,
+            normalizedFilters['travelChecklist'],
+          )) {
             return false;
           }
           if (!_matchesAiIndoorAllowed(item, requestedIndoorAllowed)) {
@@ -201,14 +207,14 @@ class FirestoreService {
           return true;
         }).toList()..sort(
           (a, b) =>
-              _aiRecommendationScore(
+              _scoreItem(
                 b,
                 requestedActivityLevel: requestedActivityLevel,
                 requestedIndoorAllowed: requestedIndoorAllowed,
                 requestedParkingAvailable: requestedParkingAvailable,
                 requestedOffLeash: requestedOffLeash,
               ).compareTo(
-                _aiRecommendationScore(
+                _scoreItem(
                   a,
                   requestedActivityLevel: requestedActivityLevel,
                   requestedIndoorAllowed: requestedIndoorAllowed,
@@ -218,11 +224,74 @@ class FirestoreService {
               ),
         );
 
+    final recommendations = <Map<String, dynamic>>[];
+    final selectedIds = <String>{};
+
+    for (final item in strictMatches) {
+      if (recommendations.length >= limit) {
+        break;
+      }
+      final itemId = _itemIdentity(item);
+      if (selectedIds.add(itemId)) {
+        recommendations.add(item);
+      }
+    }
+
+    if (recommendations.length < limit) {
+      final relaxedCandidates = [...nearbyItems]
+        ..sort(
+          (a, b) =>
+              _scoreItem(
+                b,
+                requestedActivityLevel: requestedActivityLevel,
+                requestedIndoorAllowed: requestedIndoorAllowed,
+                requestedParkingAvailable: requestedParkingAvailable,
+                requestedOffLeash: requestedOffLeash,
+              ).compareTo(
+                _scoreItem(
+                  a,
+                  requestedActivityLevel: requestedActivityLevel,
+                  requestedIndoorAllowed: requestedIndoorAllowed,
+                  requestedParkingAvailable: requestedParkingAvailable,
+                  requestedOffLeash: requestedOffLeash,
+                ),
+              ),
+        );
+
+      for (final item in relaxedCandidates) {
+        if (recommendations.length >= limit) {
+          break;
+        }
+        final itemId = _itemIdentity(item);
+        if (selectedIds.add(itemId)) {
+          recommendations.add(item);
+        }
+      }
+    }
+
     debugPrint(
-      'Firestore AI recommendation: filters=$filters, normalizedPetType=$requestedPetType, normalizedPetSize=$requestedPetSize, indoorAllowed=$requestedIndoorAllowed, parkingAvailable=$requestedParkingAvailable, offLeash=$requestedOffLeash, activityLevel=$requestedActivityLevel, matched=${filtered.length}',
+      'Firestore AI recommendation: filters=$normalizedFilters, normalizedPetType=$requestedPetType, normalizedPetSize=$requestedPetSize, indoorAllowed=$requestedIndoorAllowed, parkingAvailable=$requestedParkingAvailable, offLeash=$requestedOffLeash, activityLevel=$requestedActivityLevel, strictMatched=${strictMatches.length}, returned=${recommendations.length}',
     );
 
-    return filtered.take(limit).toList();
+    return recommendations.take(limit).toList();
+  }
+
+  Map<String, dynamic> _normalizeAiFilters(Map<String, dynamic> filters) {
+    final normalized = Map<String, dynamic>.from(filters);
+    normalized.removeWhere((key, value) {
+      if (value == null) {
+        return true;
+      }
+      if (value is String) {
+        final text = value.trim().toLowerCase();
+        return text.isEmpty || text == 'null';
+      }
+      if (value is List) {
+        return value.isEmpty;
+      }
+      return false;
+    });
+    return normalized;
   }
 
   bool _matchesKeyword(Map<String, dynamic> item, String keyword) {
@@ -570,6 +639,36 @@ class FirestoreService {
     }
 
     return score;
+  }
+
+  int _scoreItem(
+    Map<String, dynamic> item, {
+    required String requestedActivityLevel,
+    required bool? requestedIndoorAllowed,
+    required bool? requestedParkingAvailable,
+    required bool? requestedOffLeash,
+  }) {
+    final baseScore = _aiRecommendationScore(
+      item,
+      requestedActivityLevel: requestedActivityLevel,
+      requestedIndoorAllowed: requestedIndoorAllowed,
+      requestedParkingAvailable: requestedParkingAvailable,
+      requestedOffLeash: requestedOffLeash,
+    );
+    final hasImage = '${item['firstimage'] ?? ''}'.trim().isNotEmpty ? 1 : 0;
+    return (baseScore * 10) + hasImage;
+  }
+
+  String _itemIdentity(Map<String, dynamic> item) {
+    final docId = '${item['docId'] ?? ''}'.trim();
+    if (docId.isNotEmpty) {
+      return docId;
+    }
+    final contentId = '${item['contentId'] ?? ''}'.trim();
+    if (contentId.isNotEmpty) {
+      return contentId;
+    }
+    return '${item['title'] ?? ''}|${item['addr1'] ?? ''}';
   }
 
   Future<int> upsertTourPlaces(List<Map<String, dynamic>> places) async {

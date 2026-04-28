@@ -28,6 +28,9 @@ JSON 규칙:
 - 반려동물 관련 필드는 사용자가 질문 안에서 특정 반려동물 이름을 명시했을 때만 채우세요.
 - 현재 선택된 반려동물 정보가 제공되더라도, 질문에 그 반려동물 이름이 직접 등장하지 않으면 반려동물 관련 필드는 자동으로 채우지 마세요.
 - 사용자가 특정 반려동물 이름을 말하면 그 이름을 기준으로 이해하고, 제공된 선택 반려동물 정보와 이름이 일치할 때만 그 값을 JSON에 반영하세요.
+- 사용자가 질문에 특정 조건을 직접 말하면 그 조건을 JSON에 반드시 반영하세요.
+- 예: "맹견" 또는 "법적맹견"이 들어가면 isFierceDog=true 로 설정하세요.
+- 예: "맹견 아님", "맹견 아닌", "맹견 제외"가 들어가면 isFierceDog=false 로 설정하세요.
 - petGender는 "M" 또는 "F"만 사용하세요.
 - petSize는 "S" | "M" | "L"만 사용하세요.
 - activityLevel은 "L" | "M" | "H"만 사용하세요.
@@ -36,6 +39,7 @@ JSON 규칙:
 - 문자열 필드는 값이 없으면 null을 사용하세요.
 - 숫자 필드는 값이 없으면 null을 사용하세요.
 - travelChecklist 값이 없으면 빈 배열 []을 사용하세요.
+- JSON에서 null 또는 [] 로 내려간 항목은 "조건 없음", 즉 all 의미입니다.
 - JSON의 정확성이 자연어 답변보다 우선이다.
 - 추가 키를 넣지 마세요. JSON을 코드블록으로 감싸지 마세요.
 ''';
@@ -116,15 +120,55 @@ JSON 규칙:
         return content;
       }
 
+      final normalized = Map<String, dynamic>.from(decoded);
+      _applyQuestionDerivedFilters(
+        normalized,
+        latestUserText:
+            messages.lastWhere(
+              (m) => m['role'] == 'user',
+              orElse: () => const {'content': ''},
+            )['content'] ??
+            '',
+      );
+
       final geocoded = await _geocodingService.geocodeAddress(regionText);
-      final normalized = Map<String, dynamic>.from(decoded)
-        ..['mapX'] = geocoded['lng']
-        ..['mapY'] = geocoded['lat'];
+      normalized['mapX'] = geocoded['lng'];
+      normalized['mapY'] = geocoded['lat'];
 
       return '${content.substring(0, jsonRange.$1)}${jsonEncode(normalized)}${content.substring(jsonRange.$2)}';
     } catch (_) {
       return content;
     }
+  }
+
+  void _applyQuestionDerivedFilters(
+    Map<String, dynamic> normalized, {
+    required String latestUserText,
+  }) {
+    final text = latestUserText.trim().toLowerCase();
+    if (text.isEmpty) {
+      return;
+    }
+
+    if (_mentionsNegativeFierceDog(text)) {
+      normalized['isFierceDog'] = false;
+    } else if (_mentionsPositiveFierceDog(text)) {
+      normalized['isFierceDog'] = true;
+    }
+  }
+
+  bool _mentionsPositiveFierceDog(String text) {
+    return text.contains('맹견') || text.contains('법적맹견');
+  }
+
+  bool _mentionsNegativeFierceDog(String text) {
+    return text.contains('맹견 아님') ||
+        text.contains('맹견아님') ||
+        text.contains('맹견 아닌') ||
+        text.contains('맹견 제외') ||
+        text.contains('법적맹견 아님') ||
+        text.contains('법적맹견 아닌') ||
+        text.contains('법적맹견 제외');
   }
 
   String _buildSelectedPetProfilePrompt(Map<String, dynamic>? profile) {
