@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../common/api/map_service.dart';
+import '../home/home_detail_page.dart';
 
 class NearbyPage extends StatefulWidget {
   const NearbyPage({Key? key}) : super(key: key);
@@ -213,7 +214,7 @@ class _NearbyPageState extends State<NearbyPage> {
         radius: radius ?? _defaultSearchRadius,
         categoryCode: categoryCode,
       );
-      final markers = _mapService.buildMarkersFromItems(items);
+      final markers = _buildMarkersWithDetail(items);
 
       if (!mounted) {
         return;
@@ -325,6 +326,39 @@ class _NearbyPageState extends State<NearbyPage> {
         48,
       ),
     );
+  }
+
+  Set<Marker> _buildMarkersWithDetail(List<Map<String, dynamic>> items) {
+    return items
+        .map((item) {
+          final mapX = double.tryParse('${item['mapX'] ?? item['mapx'] ?? ''}');
+          final mapY = double.tryParse('${item['mapY'] ?? item['mapy'] ?? ''}');
+          if (mapX == null || mapY == null) {
+            return null;
+          }
+
+          final title = '${item['title'] ?? '이름 없음'}';
+          final address = '${item['addr1'] ?? ''}';
+          return Marker(
+            markerId: MarkerId(
+              'item_${item['contentId'] ?? item['contentid'] ?? item['docId'] ?? title}',
+            ),
+            position: LatLng(mapY, mapX),
+            infoWindow: InfoWindow(
+              title: title,
+              snippet: address,
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => HomeDetailPage(item: item),
+                  ),
+                );
+              },
+            ),
+          );
+        })
+        .whereType<Marker>()
+        .toSet();
   }
 
   Widget _buildOverlayButton({
@@ -584,22 +618,30 @@ class _NearbyPageState extends State<NearbyPage> {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => HomeDetailPage(item: item)),
+              );
+            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                address.isEmpty ? '주소 정보 없음' : address,
-                style: const TextStyle(color: Colors.black54),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  address.isEmpty ? '주소 정보 없음' : address,
+                  style: const TextStyle(color: Colors.black54),
+                ),
+              ],
+            ),
           ),
         );
       },
