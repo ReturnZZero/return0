@@ -71,10 +71,12 @@ class _AiChatPageState extends State<AiChatPage>
         return;
       }
       setState(() {
+        final formatted = _splitAssistantReply(reply);
         _messages.add(
           _ChatMessage(
             role: _ChatRole.assistant,
-            content: _formatAssistantReply(reply),
+            content: formatted.displayText,
+            jsonPayload: formatted.prettyJson,
             recommendations: recommendations,
           ),
         );
@@ -130,10 +132,10 @@ class _AiChatPageState extends State<AiChatPage>
     }
   }
 
-  String _formatAssistantReply(String reply) {
+  _FormattedAssistantReply _splitAssistantReply(String reply) {
     final jsonRange = _findJsonRange(reply);
     if (jsonRange == null) {
-      return reply;
+      return _FormattedAssistantReply(displayText: reply);
     }
 
     try {
@@ -142,19 +144,45 @@ class _AiChatPageState extends State<AiChatPage>
       final prettyJson = _prettyJsonEncoder.convert(decoded);
       final prefix = reply.substring(0, jsonRange.$1).trimRight();
       final suffix = reply.substring(jsonRange.$2).trimLeft();
-      if (prefix.isEmpty) {
-        if (suffix.isEmpty) {
-          return prettyJson;
-        }
-        return '$prettyJson\n\n$suffix';
-      }
-      if (suffix.isEmpty) {
-        return '$prefix\n\n$prettyJson';
-      }
-      return '$prefix\n\n$prettyJson\n\n$suffix';
+      final displayText = [
+        prefix,
+        suffix,
+      ].where((part) => part.isNotEmpty).join('\n\n').trim();
+      return _FormattedAssistantReply(
+        displayText: displayText.isEmpty ? '필터 결과를 확인해 주세요.' : displayText,
+        prettyJson: prettyJson,
+      );
     } catch (_) {
-      return reply;
+      return _FormattedAssistantReply(displayText: reply);
     }
+  }
+
+  Future<void> _showJsonPopup(String jsonPayload) {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('필터 JSON'),
+          content: SingleChildScrollView(
+            child: SelectableText(
+              jsonPayload,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   (int, int)? _findJsonRange(String content) {
@@ -317,24 +345,30 @@ class _AiChatPageState extends State<AiChatPage>
                         alignment: isUser
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isUser
-                                ? const Color(0xFFFFDE59)
-                                : const Color(0xFFF2F2F2),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            message.content,
-                            style: const TextStyle(fontSize: 15),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: !isUser && message.jsonPayload != null
+                              ? () => _showJsonPopup(message.jsonPayload!)
+                              : null,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isUser
+                                  ? const Color(0xFFFFDE59)
+                                  : const Color(0xFFF2F2F2),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              message.content,
+                              style: const TextStyle(fontSize: 15),
+                            ),
                           ),
                         ),
                       ),
@@ -408,12 +442,21 @@ class _ChatMessage {
   _ChatMessage({
     required this.role,
     required this.content,
+    this.jsonPayload,
     this.recommendations = const [],
   });
 
   final _ChatRole role;
   final String content;
+  final String? jsonPayload;
   final List<Map<String, dynamic>> recommendations;
+}
+
+class _FormattedAssistantReply {
+  const _FormattedAssistantReply({required this.displayText, this.prettyJson});
+
+  final String displayText;
+  final String? prettyJson;
 }
 
 class _NetworkImageWithFallback extends StatelessWidget {
