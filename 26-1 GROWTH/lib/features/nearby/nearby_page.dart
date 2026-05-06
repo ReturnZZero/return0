@@ -349,9 +349,7 @@ class _NearbyPageState extends State<NearbyPage> {
               snippet: address,
               onTap: () async {
                 await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => HomeDetailPage(item: item),
-                  ),
+                  MaterialPageRoute(builder: (_) => HomeDetailPage(item: item)),
                 );
               },
             ),
