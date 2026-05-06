@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:math';
 
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
@@ -10,7 +11,44 @@ class FirestoreService {
   final FirebaseFirestore _firestore;
 
   static const String tourPlacesCollection = 'tour_places';
+  static const String userProfilesCollection = 'user_profiles';
   static const int _maxBatchSize = 400;
+  static final Random _random = Random();
+  static final ValueNotifier<int> nicknameTick = ValueNotifier<int>(0);
+
+  Future<String> ensureUserNickname({required String uid}) async {
+    final docRef = _firestore.collection(userProfilesCollection).doc(uid);
+    final snapshot = await docRef.get();
+    final nickname = '${snapshot.data()?['nickname'] ?? ''}'.trim();
+    if (nickname.isNotEmpty) {
+      return nickname;
+    }
+
+    final generatedNickname = _generateDefaultNickname();
+    await docRef.set({
+      'nickname': generatedNickname,
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (!snapshot.exists) 'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    return generatedNickname;
+  }
+
+  Future<void> saveUserNickname({
+    required String uid,
+    required String nickname,
+  }) async {
+    await _firestore.collection(userProfilesCollection).doc(uid).set({
+      'nickname': nickname.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    nicknameTick.value++;
+  }
+
+  String _generateDefaultNickname() {
+    final value = 1000 + _random.nextInt(9000);
+    return '닉네임$value';
+  }
 
   Future<bool> hasTourPlaces() async {
     final snapshot = await _firestore

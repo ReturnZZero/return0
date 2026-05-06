@@ -12,10 +12,14 @@ class MyPage extends StatefulWidget {
 }
 
 class _MyPageState extends State<MyPage> {
+  final _authService = FirebaseAuthService();
   final _tourSeedService = TourSeedService();
   final _firestoreService = FirestoreService();
+  final _nicknameController = TextEditingController();
   bool _isSeeding = false;
   bool _isResetting = false;
+  bool _isLoadingNickname = false;
+  bool _isSavingNickname = false;
   bool _hasSeededTourPlaces = false;
   bool _isCheckingTourPlaces = true;
   String _seedStatus = 'DB업로드 버튼을 누르면 지역 데이터를 Firestore에 적재합니다.';
@@ -24,7 +28,14 @@ class _MyPageState extends State<MyPage> {
   @override
   void initState() {
     super.initState();
+    _loadNickname();
     _loadTourPlaceStatus();
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -34,6 +45,68 @@ class _MyPageState extends State<MyPage> {
       messenger.showSnackBar(const SnackBar(content: Text('로그아웃 되었습니다.')));
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text('로그아웃에 실패했어요.')));
+    }
+  }
+
+  Future<void> _loadNickname() async {
+    final user = _authService.currentUser;
+    if (user == null) {
+      return;
+    }
+
+    setState(() => _isLoadingNickname = true);
+    try {
+      final nickname = await _firestoreService.ensureUserNickname(
+        uid: user.uid,
+      );
+      if (!mounted) {
+        return;
+      }
+      _nicknameController.text = nickname;
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('닉네임을 불러오지 못했어요: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingNickname = false);
+      }
+    }
+  }
+
+  Future<void> _saveNickname() async {
+    final user = _authService.currentUser;
+    final nickname = _nicknameController.text.trim();
+    if (user == null || nickname.isEmpty || _isSavingNickname) {
+      return;
+    }
+
+    setState(() => _isSavingNickname = true);
+    try {
+      await _firestoreService.saveUserNickname(
+        uid: user.uid,
+        nickname: nickname,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('닉네임을 저장했어요.')));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('닉네임 저장에 실패했어요: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingNickname = false);
+      }
     }
   }
 
@@ -206,6 +279,64 @@ class _MyPageState extends State<MyPage> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: const Text('로그아웃'),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F7F7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE5E5E5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '닉네임',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _nicknameController,
+                      enabled: !_isLoadingNickname && !_isSavingNickname,
+                      decoration: InputDecoration(
+                        hintText: _isLoadingNickname
+                            ? '불러오는 중...'
+                            : '닉네임을 입력하세요',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE0E0E0),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE0E0E0),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoadingNickname || _isSavingNickname
+                            ? null
+                            : _saveNickname,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(_isSavingNickname ? '저장 중...' : '닉네임 저장'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const Spacer(),
               Container(

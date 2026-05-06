@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../common/api/favorite_service.dart';
+import '../../common/api/firebase_auth_service.dart';
 import '../../common/api/firestore_service.dart';
 import '../../common/api/pet_profile_service.dart';
 import '../pet/pet_registration_page.dart';
@@ -16,6 +17,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final _authService = FirebaseAuthService();
   final _searchController = TextEditingController();
   final _favoriteService = const FavoriteService();
   final _firestoreService = FirestoreService();
@@ -24,6 +26,7 @@ class _HomePageState extends State<HomePage> {
   final Set<String> _favoriteIds = {};
   final List<Map<String, dynamic>> _petProfiles = [];
   String? _selectedPetId;
+  String _nickname = '';
 
   final List<_CategoryItem> _categories = const [
     _CategoryItem(label: '숙소', assetPath: 'assets/icon_house.png'),
@@ -38,6 +41,7 @@ class _HomePageState extends State<HomePage> {
 
   int? _selectedIndex;
   bool _isSearching = false;
+  late final VoidCallback _nicknameListener;
 
   static const Map<String, String> _categoryCodeMap = {
     '숙소': 'AC',
@@ -53,8 +57,24 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _nicknameListener = _loadNickname;
+    FirestoreService.nicknameTick.addListener(_nicknameListener);
+    _loadNickname();
     _loadFavorites();
     _loadPetProfiles();
+  }
+
+  Future<void> _loadNickname() async {
+    final user = _authService.currentUser;
+    if (user == null) {
+      return;
+    }
+
+    final nickname = await _firestoreService.ensureUserNickname(uid: user.uid);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _nickname = nickname);
   }
 
   Future<void> _loadFavorites() async {
@@ -136,6 +156,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    FirestoreService.nicknameTick.removeListener(_nicknameListener);
     _searchController.dispose();
     super.dispose();
   }
@@ -207,9 +228,12 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 16),
                 _buildSearchBar(accentColor),
                 const SizedBox(height: 16),
-                const Text(
-                  '반가워요.',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                Text(
+                  _nickname.isEmpty ? '반가워요.' : '반가워요, $_nickname님.',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
