@@ -126,7 +126,10 @@ class _AiChatPageState extends State<AiChatPage>
         return const [];
       }
 
-      return _firestoreService.recommendTourPlacesForAi(filters: filters);
+      final recommendations = await _firestoreService.recommendTourPlacesForAi(
+        filters: filters,
+      );
+      return _firestoreService.attachReviewCounts(recommendations);
     } catch (_) {
       return const [];
     }
@@ -225,6 +228,7 @@ class _AiChatPageState extends State<AiChatPage>
               final item = items[index];
               final title = '${item['title'] ?? '이름 없음'}';
               final address = '${item['addr1'] ?? ''}';
+              final reviewCount = (item['reviewCount'] as num?)?.toInt() ?? 0;
               return SizedBox(
                 width: 264,
                 child: Material(
@@ -275,6 +279,15 @@ class _AiChatPageState extends State<AiChatPage>
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.black54),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '리뷰 $reviewCount개',
+                            style: const TextStyle(
+                              color: Colors.black45,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           Expanded(

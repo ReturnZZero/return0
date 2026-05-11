@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../common/api/firestore_service.dart';
 import '../../common/api/map_service.dart';
 import '../home/home_detail_page.dart';
 
@@ -214,7 +215,8 @@ class _NearbyPageState extends State<NearbyPage> {
         radius: radius ?? _defaultSearchRadius,
         categoryCode: categoryCode,
       );
-      final markers = _buildMarkersWithDetail(items);
+      final enrichedItems = await FirestoreService().attachReviewCounts(items);
+      final markers = _buildMarkersWithDetail(enrichedItems);
 
       if (!mounted) {
         return;
@@ -223,7 +225,7 @@ class _NearbyPageState extends State<NearbyPage> {
       setState(() {
         _items
           ..clear()
-          ..addAll(items);
+          ..addAll(enrichedItems);
         _markers
           ..removeWhere((marker) => marker.markerId.value.startsWith('item_'))
           ..addAll(markers);
@@ -602,6 +604,7 @@ class _NearbyPageState extends State<NearbyPage> {
         final item = _items[index];
         final title = '${item['title'] ?? '이름 없음'}';
         final address = '${item['addr1'] ?? ''}';
+        final reviewCount = (item['reviewCount'] as num?)?.toInt() ?? 0;
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -637,6 +640,15 @@ class _NearbyPageState extends State<NearbyPage> {
                 Text(
                   address.isEmpty ? '주소 정보 없음' : address,
                   style: const TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '리뷰 $reviewCount개',
+                  style: const TextStyle(
+                    color: Colors.black45,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),

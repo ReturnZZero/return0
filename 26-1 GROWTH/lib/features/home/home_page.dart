@@ -183,17 +183,20 @@ class _HomePageState extends State<HomePage> {
         keyword: keyword,
         categoryCode: lclsSystm1,
       );
+      final enrichedResults = await _firestoreService.attachReviewCounts(
+        results,
+      );
       if (!mounted) {
         return;
       }
       setState(() {
         _results
           ..clear()
-          ..addAll(results);
+          ..addAll(enrichedResults);
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('검색 결과 ${results.length}건')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('검색 결과 ${enrichedResults.length}건')),
+      );
     } catch (e) {
       if (!mounted) {
         return;
@@ -272,6 +275,7 @@ class _HomePageState extends State<HomePage> {
             final item = _results[index];
             final title = '${item['title'] ?? '이름 없음'}';
             final address = '${item['addr1'] ?? ''}';
+            final reviewCount = (item['reviewCount'] as num?)?.toInt() ?? 0;
             final isFavorite = _favoriteIds.contains(
               FavoriteService.itemId(item),
             );
@@ -320,6 +324,15 @@ class _HomePageState extends State<HomePage> {
                               Text(
                                 address.isEmpty ? '주소 정보 없음' : address,
                                 style: const TextStyle(color: Colors.black54),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '리뷰 $reviewCount개',
+                                style: const TextStyle(
+                                  color: Colors.black45,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),

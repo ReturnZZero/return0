@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../common/api/favorite_service.dart';
+import '../../common/api/firestore_service.dart';
 import '../home/home_detail_page.dart';
 
 class FavoritePage extends StatefulWidget {
@@ -33,6 +34,7 @@ class _FavoritePageState extends State<FavoritePage> {
   };
 
   final _favoriteService = const FavoriteService();
+  final _firestoreService = FirestoreService();
   final List<Map<String, dynamic>> _favorites = [];
   bool _isLoading = false;
   late final VoidCallback _listener;
@@ -70,13 +72,14 @@ class _FavoritePageState extends State<FavoritePage> {
   Future<void> _loadFavorites() async {
     setState(() => _isLoading = true);
     final list = await _favoriteService.loadFavorites();
+    final enrichedList = await _firestoreService.attachReviewCounts(list);
     if (!mounted) {
       return;
     }
     setState(() {
       _favorites
         ..clear()
-        ..addAll(list);
+        ..addAll(enrichedList);
       _isLoading = false;
     });
   }
@@ -150,6 +153,8 @@ class _FavoritePageState extends State<FavoritePage> {
                             final item = filteredFavorites[index];
                             final title = '${item['title'] ?? '이름 없음'}';
                             final address = '${item['addr1'] ?? ''}';
+                            final reviewCount =
+                                (item['reviewCount'] as num?)?.toInt() ?? 0;
                             return Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
@@ -203,6 +208,15 @@ class _FavoritePageState extends State<FavoritePage> {
                                                     : address,
                                                 style: const TextStyle(
                                                   color: Colors.black54,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                '리뷰 $reviewCount개',
+                                                style: const TextStyle(
+                                                  color: Colors.black45,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
                                               ),
                                             ],

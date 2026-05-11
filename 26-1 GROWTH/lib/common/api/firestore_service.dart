@@ -12,6 +12,7 @@ class FirestoreService {
 
   static const String tourPlacesCollection = 'tour_places';
   static const String userProfilesCollection = 'user_profiles';
+  static const String reviewsCollection = 'reviews';
   static const int _maxBatchSize = 400;
   static final Random _random = Random();
   static final ValueNotifier<int> nicknameTick = ValueNotifier<int>(0);
@@ -43,6 +44,91 @@ class FirestoreService {
       'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     nicknameTick.value++;
+  }
+
+  Stream<List<Map<String, dynamic>>> watchPlaceReviews({
+    required String placeId,
+  }) {
+    return _firestore
+        .collection(tourPlacesCollection)
+        .doc(placeId)
+        .collection(reviewsCollection)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => {...doc.data(), 'reviewId': doc.id})
+              .toList(),
+        );
+  }
+
+  Future<void> addPlaceReview({
+    required String placeId,
+    required String userId,
+    required String nickname,
+    required String content,
+  }) async {
+    final placeRef = _firestore.collection(tourPlacesCollection).doc(placeId);
+    final reviewRef = placeRef.collection(reviewsCollection).doc();
+    final batch = _firestore.batch();
+
+    batch.set(reviewRef, {
+      'userId': userId,
+      'nickname': nickname.trim(),
+      'content': content.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.set(placeRef, {
+      'reviewCount': FieldValue.increment(1),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await batch.commit();
+  }
+
+  Future<List<Map<String, dynamic>>> attachReviewCounts(
+    List<Map<String, dynamic>> items,
+  ) async {
+    if (items.isEmpty) {
+      return [];
+    }
+
+    final enriched = <Map<String, dynamic>>[];
+    for (final item in items) {
+      final placeId = resolvePlaceId(item);
+      if (placeId == null) {
+        enriched.add({...item, 'reviewCount': item['reviewCount'] ?? 0});
+        continue;
+      }
+
+      try {
+        final snapshot = await _firestore
+            .collection(tourPlacesCollection)
+            .doc(placeId)
+            .get();
+        final reviewCount =
+            (snapshot.data()?['reviewCount'] as num?)?.toInt() ??
+            (item['reviewCount'] as num?)?.toInt() ??
+            0;
+        enriched.add({...item, 'reviewCount': reviewCount});
+      } catch (_) {
+        enriched.add({...item, 'reviewCount': item['reviewCount'] ?? 0});
+      }
+    }
+
+    return enriched;
+  }
+
+  String? resolvePlaceId(Map<String, dynamic> item) {
+    final contentId = '${item['contentId'] ?? ''}'.trim();
+    if (contentId.isNotEmpty) {
+      return contentId;
+    }
+    final docId = '${item['docId'] ?? ''}'.trim();
+    if (docId.isNotEmpty) {
+      return docId;
+    }
+    return null;
   }
 
   String _generateDefaultNickname() {
