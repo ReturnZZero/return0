@@ -62,23 +62,9 @@ AI 기반 여행 상담 챗봇과 위치 기반 서비스를 결합하여
 
 ---
 
-##  시스템 아키텍처 (System Architecture)
+## 🏗️ 시스템 아키텍처 (System Architecture)
 
-```
-┌──────────┐    ┌────────────────────┐    ┌──────────────────────┐    ┌──────────────────────┐
-│  User    │───▶│  Client (Flutter)  │───▶│  Serverless Backend  │───▶│  External API & AI   │
-│          │    │                    │    │     (Firebase)       │    │                      │
-│ 로그인    │    │ • 인증·프로필 관리  │    │ • Authentication     │    │ • OpenAI GPT API     │
-│ 프로필등록│    │ • 지도 UI          │    │ • Firestore Database │    │ • Google Maps API    │
-│ 장소탐색  │    │ • 챗봇 UI          │    │                      │    │ • Geocoding API      │
-│ 챗봇상담  │    │ • 검색·필터링 엔진 │    │                      │    │ • 한국관광공사 TourAPI│
-└──────────┘    └────────────────────┘    └──────────────────────┘    └──────────────────────┘
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Data Processing Pipeline ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  TourAPI 수집 ─▶ 웹 크롤링 (공홈·인스타·블로그·후기) ─▶ GPT 구조화 추출
-  ─▶ Confidence Score 산정 ─▶ 충돌 감지 ─▶ 검증 DB (Firestore)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+![System Architecture](https://raw.githubusercontent.com/ReturnZZero/return0/main/docs/System%20Architecture.png)
 
 ---
 
