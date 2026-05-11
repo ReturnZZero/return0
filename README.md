@@ -217,13 +217,13 @@ return0/
 
 ---
 
-##  관련 문서 (Documents)
+## 📎 관련 문서 (Documents)
 
 | 문서 | 링크 |
 |---|---|
-| 중간발표 자료 | [📄 25-return 0;-중간발표 발표자료.pdf](./docs/25-return%200%3B-중간발표%20발표자료.pdf)|
-| 1차 보고서 | [📄 25-return0;-1차보고서.pdf](./docs/25-return0%3B-1차보고서.pdf)  |
-| 기말 보고서 | [📄 docs/](./docs/) |
+| 중간발표 자료 | [📄 중간발표 발표자료](https://github.com/ReturnZZero/return0/blob/main/docs/25-return%200%3B-%E1%84%8C%E1%85%AE%E1%86%BC%E1%84%80%E1%85%A1%E1%86%AB%E1%84%87%E1%85%A1%E1%86%AF%E1%84%91%E1%85%AD%20%E1%84%87%E1%85%A1%E1%86%AF%E1%84%91%E1%85%AD%E1%84%8C%E1%85%A1%E1%84%85%E1%85%AD.pdf) |
+| 1차 보고서 | [📄 1차 보고서](https://github.com/ReturnZZero/return0/blob/main/docs/25-return0%3B-1%E1%84%8E%E1%85%A1%E1%84%87%E1%85%A9%E1%84%80%E1%85%A9%E1%84%89%E1%85%A5.pdf) |
+| 기말 보고서 | 추후 업로드 예정 |
 
 ---
 
