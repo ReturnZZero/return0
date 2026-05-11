@@ -173,11 +173,17 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
       items.add(_DetailInfoItem(label: '장소 유형', value: placeType));
     }
 
+    final petSize = _formatPetSize(item['petSize']);
+    if (petSize.isNotEmpty) {
+      items.add(_DetailInfoItem(label: '입장가능', value: petSize));
+    }
+
     return items;
   }
 
   List<String> _buildShopInfoTags(Map<String, dynamic> item) {
     final tags = <String>[];
+    final petSize = '${item['petSize'] ?? ''}'.trim().toUpperCase();
 
     if (item['indoorAllowed'] == true) {
       tags.add('실내 이용 가능');
@@ -190,6 +196,9 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
     }
     if (item['isFierceDog'] == true) {
       tags.add('맹견 가능');
+    }
+    if (petSize == 'L') {
+      tags.add('대형견가능');
     }
 
     final checklist = item['travelChecklist'];
@@ -229,6 +238,20 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
         return '역사관광';
       default:
         return text;
+    }
+  }
+
+  String _formatPetSize(dynamic value) {
+    final text = '${value ?? ''}'.trim().toUpperCase();
+    switch (text) {
+      case 'S':
+        return '소형견 미만 (10kg)';
+      case 'M':
+        return '중형견 미만 (25kg)';
+      case 'L':
+        return '제한없음';
+      default:
+        return '';
     }
   }
 }

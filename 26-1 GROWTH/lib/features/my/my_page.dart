@@ -267,150 +267,154 @@ class _MyPageState extends State<MyPage> {
         surfaceTintColor: Colors.white,
         title: const Text('마이'),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              OutlinedButton(
-                onPressed: () => _logout(context),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OutlinedButton(
+                  onPressed: () => _logout(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('로그아웃'),
                 ),
-                child: const Text('로그아웃'),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE5E5E5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '닉네임',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F7F7),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE5E5E5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '닉네임',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _nicknameController,
-                      enabled: !_isLoadingNickname && !_isSavingNickname,
-                      decoration: InputDecoration(
-                        hintText: _isLoadingNickname
-                            ? '불러오는 중...'
-                            : '닉네임을 입력하세요',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE0E0E0),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _nicknameController,
+                        enabled: !_isLoadingNickname && !_isSavingNickname,
+                        decoration: InputDecoration(
+                          hintText: _isLoadingNickname
+                              ? '불러오는 중...'
+                              : '닉네임을 입력하세요',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE0E0E0),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE0E0E0),
+                            ),
                           ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE0E0E0),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isLoadingNickname || _isSavingNickname
+                              ? null
+                              : _saveNickname,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoadingNickname || _isSavingNickname
-                            ? null
-                            : _saveNickname,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: Text(_isSavingNickname ? '저장 중...' : '닉네임 저장'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE5E5E5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'DB 테스트 적재',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _seedStatus,
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        height: 1.4,
-                      ),
-                    ),
-                    if (_lastResult != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        '지역 ${_lastResult!.regionCount}개, 조회 ${_lastResult!.fetchedCount}건, 저장 ${_lastResult!.savedCount}건',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
+                          child: Text(_isSavingNickname ? '저장 중...' : '닉네임 저장'),
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed:
-                    _isSeeding ||
-                        _isResetting ||
-                        _isCheckingTourPlaces ||
-                        _hasSeededTourPlaces
-                    ? null
-                    : _seedTourPlaces,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F7F7),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE5E5E5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'DB 테스트 적재',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _seedStatus,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (_lastResult != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          '지역 ${_lastResult!.regionCount}개, 조회 ${_lastResult!.fetchedCount}건, 저장 ${_lastResult!.savedCount}건',
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                child: Text(
-                  _isCheckingTourPlaces
-                      ? '상태 확인 중...'
-                      : _isSeeding
-                      ? '적재 중...'
-                      : _hasSeededTourPlaces
-                      ? '이미 적재됨'
-                      : 'DB업로드',
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed:
+                      _isSeeding ||
+                          _isResetting ||
+                          _isCheckingTourPlaces ||
+                          _hasSeededTourPlaces
+                      ? null
+                      : _seedTourPlaces,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    _isCheckingTourPlaces
+                        ? '상태 확인 중...'
+                        : _isSeeding
+                        ? '적재 중...'
+                        : _hasSeededTourPlaces
+                        ? '이미 적재됨'
+                        : 'DB업로드',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: _isSeeding || _isResetting || _isCheckingTourPlaces
-                    ? null
-                    : _resetTourPlaces,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: _isSeeding || _isResetting || _isCheckingTourPlaces
+                      ? null
+                      : _resetTourPlaces,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(_isResetting ? '초기화 중...' : '초기화'),
                 ),
-                child: Text(_isResetting ? '초기화 중...' : '초기화'),
-              ),
-              const SizedBox(height: 12),
-            ],
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),

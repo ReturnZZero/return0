@@ -238,6 +238,10 @@ class _AiChatPageState extends State<AiChatPage>
                           builder: (_) => HomeDetailPage(item: item),
                         ),
                       );
+                      if (!mounted) {
+                        return;
+                      }
+                      FocusScope.of(context).unfocus();
                     },
                     child: Container(
                       padding: const EdgeInsets.all(14),
