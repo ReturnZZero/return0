@@ -1,3 +1,5 @@
+<div align="center">
+
 #  MyPetTrip
 ### AI 기반 반려동물 동반 장소 추천 서비스
 
@@ -11,6 +13,8 @@
 [![트랙](https://img.shields.io/badge/캡스톤디자인-산학%20트랙-2ECC71?style=flat-square)]()
 [![팀](https://img.shields.io/badge/Team%2025-return%200%3B-E74C3C?style=flat-square)]()
 [![기간](https://img.shields.io/badge/기간-2025.09%20~%202026.06-F39C12?style=flat-square)]()
+
+</div>
 
 ---
 
