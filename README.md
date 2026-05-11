@@ -87,7 +87,8 @@ Confidence Score 산정 (출처 40% + 최신성 30% + 명확성 30%)
         ↓
 고신뢰도 검증 DB (Firestore)
 ```
-
+<div align="center">
+        
 | 출처 | 신뢰도 가중치 |
 |---|---|
 | 공식 홈페이지 | 1.00 |
@@ -96,6 +97,7 @@ Confidence Score 산정 (출처 40% + 최신성 30% + 명확성 30%)
 | 카카오맵 후기 | 0.40 |
 
 > **검증 결과** : Confidence Score 관리자 일치율 **89%** · NEEDS_REVIEW 전환 정확도 **91.3%** · gpt-4o 대비 mini 정확도 차이 **2.8%p** (비용 97% 절감)
+</div>
 
 ---
 
