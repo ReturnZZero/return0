@@ -89,6 +89,25 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _refreshResultReviewCounts() async {
+    if (_results.isEmpty) {
+      return;
+    }
+
+    final enrichedResults = await _firestoreService.attachReviewCounts(
+      _results,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _results
+        ..clear()
+        ..addAll(enrichedResults);
+    });
+  }
+
   Future<void> _toggleFavorite(Map<String, dynamic> item) async {
     final list = await _favoriteService.toggleFavorite(item);
     if (!mounted) {
@@ -302,6 +321,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                   await _loadFavorites();
+                  await _refreshResultReviewCounts();
                 },
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -244,6 +244,33 @@ class _NearbyPageState extends State<NearbyPage> {
     }
   }
 
+  Future<void> _refreshVisibleReviewCounts() async {
+    if (_items.isEmpty) {
+      return;
+    }
+
+    final enrichedItems = await FirestoreService().attachReviewCounts(_items);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _items
+        ..clear()
+        ..addAll(enrichedItems);
+      _markers
+        ..removeWhere((marker) => marker.markerId.value.startsWith('item_'))
+        ..addAll(_buildMarkersWithDetail(enrichedItems));
+    });
+  }
+
+  Future<void> _openDetail(Map<String, dynamic> item) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => HomeDetailPage(item: item)));
+    await _refreshVisibleReviewCounts();
+  }
+
   Future<void> _moveToCurrentLocation() async {
     try {
       final position = await _mapService.getCurrentPosition();
@@ -350,9 +377,7 @@ class _NearbyPageState extends State<NearbyPage> {
               title: title,
               snippet: address,
               onTap: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => HomeDetailPage(item: item)),
-                );
+                await _openDetail(item);
               },
             ),
           );
@@ -622,9 +647,7 @@ class _NearbyPageState extends State<NearbyPage> {
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => HomeDetailPage(item: item)),
-              );
+              await _openDetail(item);
             },
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

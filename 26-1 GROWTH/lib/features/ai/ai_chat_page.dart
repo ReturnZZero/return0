@@ -135,6 +135,43 @@ class _AiChatPageState extends State<AiChatPage>
     }
   }
 
+  Future<void> _refreshMessageRecommendations(int messageIndex) async {
+    if (messageIndex < 0 || messageIndex >= _messages.length) {
+      return;
+    }
+
+    final message = _messages[messageIndex];
+    if (message.recommendations.isEmpty) {
+      return;
+    }
+
+    final refreshed = await _firestoreService.attachReviewCounts(
+      message.recommendations,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _messages[messageIndex] = message.copyWith(recommendations: refreshed);
+    });
+  }
+
+  Future<void> _openRecommendationDetail(
+    int messageIndex,
+    Map<String, dynamic> item,
+  ) async {
+    FocusScope.of(context).unfocus();
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => HomeDetailPage(item: item)));
+    if (!mounted) {
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    await _refreshMessageRecommendations(messageIndex);
+  }
+
   _FormattedAssistantReply _splitAssistantReply(String reply) {
     final jsonRange = _findJsonRange(reply);
     if (jsonRange == null) {
@@ -207,7 +244,10 @@ class _AiChatPageState extends State<AiChatPage>
     return double.tryParse('$value');
   }
 
-  Widget _buildRecommendationCarousel(List<Map<String, dynamic>> items) {
+  Widget _buildRecommendationCarousel(
+    int messageIndex,
+    List<Map<String, dynamic>> items,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -236,16 +276,7 @@ class _AiChatPageState extends State<AiChatPage>
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () async {
-                      FocusScope.of(context).unfocus();
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => HomeDetailPage(item: item),
-                        ),
-                      );
-                      if (!mounted) {
-                        return;
-                      }
-                      FocusScope.of(context).unfocus();
+                      await _openRecommendationDetail(messageIndex, item);
                     },
                     child: Container(
                       padding: const EdgeInsets.all(14),
@@ -393,6 +424,7 @@ class _AiChatPageState extends State<AiChatPage>
                         Padding(
                           padding: const EdgeInsets.only(top: 6, bottom: 8),
                           child: _buildRecommendationCarousel(
+                            index,
                             message.recommendations,
                           ),
                         ),
@@ -467,6 +499,20 @@ class _ChatMessage {
   final String content;
   final String? jsonPayload;
   final List<Map<String, dynamic>> recommendations;
+
+  _ChatMessage copyWith({
+    _ChatRole? role,
+    String? content,
+    String? jsonPayload,
+    List<Map<String, dynamic>>? recommendations,
+  }) {
+    return _ChatMessage(
+      role: role ?? this.role,
+      content: content ?? this.content,
+      jsonPayload: jsonPayload ?? this.jsonPayload,
+      recommendations: recommendations ?? this.recommendations,
+    );
+  }
 }
 
 class _FormattedAssistantReply {
