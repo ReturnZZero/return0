@@ -19,6 +19,7 @@ class _AiChatPageState extends State<AiChatPage>
   static const _prettyJsonEncoder = JsonEncoder.withIndent('  ');
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
+  final _pageFocusNode = FocusNode();
   final _openAiService = OpenAiService();
   final _petProfileService = const PetProfileService();
   final _firestoreService = FirestoreService();
@@ -36,6 +37,7 @@ class _AiChatPageState extends State<AiChatPage>
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _pageFocusNode.dispose();
     super.dispose();
   }
 
@@ -161,14 +163,16 @@ class _AiChatPageState extends State<AiChatPage>
     int messageIndex,
     Map<String, dynamic> item,
   ) async {
-    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+    FocusScope.of(context).requestFocus(_pageFocusNode);
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => HomeDetailPage(item: item)));
     if (!mounted) {
       return;
     }
-    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+    FocusScope.of(context).requestFocus(_pageFocusNode);
     await _refreshMessageRecommendations(messageIndex);
   }
 
@@ -358,124 +362,129 @@ class _AiChatPageState extends State<AiChatPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return Focus(
+      focusNode: _pageFocusNode,
+      child: Scaffold(
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.white,
-        title: const Text('AI 채팅'),
-      ),
-      body: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.white,
+          title: const Text('AI 채팅'),
+        ),
+        body: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final message = _messages[index];
+                    final isUser = message.role == _ChatRole.user;
+                    return Column(
+                      crossAxisAlignment: isUser
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        Align(
+                          alignment: isUser
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: !isUser && message.jsonPayload != null
+                                ? () => _showJsonPopup(message.jsonPayload!)
+                                : null,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isUser
+                                    ? const Color(0xFFFFDE59)
+                                    : const Color(0xFFF2F2F2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                message.content,
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!isUser && message.recommendations.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, bottom: 8),
+                            child: _buildRecommendationCarousel(
+                              index,
+                              message.recommendations,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  final isUser = message.role == _ChatRole.user;
-                  return Column(
-                    crossAxisAlignment: isUser
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
+              ),
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text('AI 응답 중...'),
+                ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  child: Row(
                     children: [
-                      Align(
-                        alignment: isUser
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: !isUser && message.jsonPayload != null
-                              ? () => _showJsonPopup(message.jsonPayload!)
-                              : null,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          minLines: 1,
+                          maxLines: 4,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) =>
+                              _isLoading ? null : _sendMessage(),
+                          decoration: const InputDecoration(
+                            hintText: '메시지를 입력하세요',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
                               vertical: 10,
                             ),
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isUser
-                                  ? const Color(0xFFFFDE59)
-                                  : const Color(0xFFF2F2F2),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              message.content,
-                              style: const TextStyle(fontSize: 15),
-                            ),
                           ),
                         ),
                       ),
-                      if (!isUser && message.recommendations.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6, bottom: 8),
-                          child: _buildRecommendationCarousel(
-                            index,
-                            message.recommendations,
-                          ),
-                        ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                FocusScope.of(context).unfocus();
+                                _sendMessage();
+                              },
+                        child: const Text('전송'),
+                      ),
                     ],
-                  );
-                },
-              ),
-            ),
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: Text('AI 응답 중...'),
-              ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        minLines: 1,
-                        maxLines: 4,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _isLoading ? null : _sendMessage(),
-                        decoration: const InputDecoration(
-                          hintText: '메시지를 입력하세요',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              FocusScope.of(context).unfocus();
-                              _sendMessage();
-                            },
-                      child: const Text('전송'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

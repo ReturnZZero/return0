@@ -12,6 +12,55 @@ class OpenAiService {
 
   final http.Client _client;
   final GoogleGeocodingService _geocodingService;
+  static const String _regionSuffixPattern =
+      r'(?:의|에|에서|으로|로|과|와|이|가|을|를|은|는|도|만|부터|까지|근처|인근|주변|쪽)?';
+  static const Map<String, String> _regionAliases = {
+    '서울특별시': '서울특별시',
+    '서울시': '서울특별시',
+    '서울': '서울특별시',
+    '부산광역시': '부산광역시',
+    '부산시': '부산광역시',
+    '부산': '부산광역시',
+    '대구광역시': '대구광역시',
+    '대구시': '대구광역시',
+    '대구': '대구광역시',
+    '인천광역시': '인천광역시',
+    '인천시': '인천광역시',
+    '인천': '인천광역시',
+    '광주광역시': '광주광역시',
+    '광주시': '광주광역시',
+    '광주': '광주광역시',
+    '대전광역시': '대전광역시',
+    '대전시': '대전광역시',
+    '대전': '대전광역시',
+    '울산광역시': '울산광역시',
+    '울산시': '울산광역시',
+    '울산': '울산광역시',
+    '세종특별자치시': '세종특별자치시',
+    '세종시': '세종특별자치시',
+    '세종': '세종특별자치시',
+    '경기도': '경기도',
+    '경기': '경기도',
+    '강원특별자치도': '강원특별자치도',
+    '강원도': '강원특별자치도',
+    '강원': '강원특별자치도',
+    '충청북도': '충청북도',
+    '충북': '충청북도',
+    '충청남도': '충청남도',
+    '충남': '충청남도',
+    '전북특별자치도': '전북특별자치도',
+    '전라북도': '전북특별자치도',
+    '전북': '전북특별자치도',
+    '전라남도': '전라남도',
+    '전남': '전라남도',
+    '경상북도': '경상북도',
+    '경북': '경상북도',
+    '경상남도': '경상남도',
+    '경남': '경상남도',
+    '제주특별자치도': '제주특별자치도',
+    '제주도': '제주특별자치도',
+    '제주': '제주특별자치도',
+  };
   static const String _systemPrompt = '''
 당신은 반려동물 동반 여행 앱을 위한 도우미입니다.
 반드시 한국어로 답하세요. 항상 아래 형식으로 응답하세요:
@@ -49,11 +98,11 @@ JSON 규칙:
     Map<String, dynamic>? selectedPetProfile,
     String model = 'gpt-4o-mini',
   }) async {
-    final effectiveSelectedPetProfile =
-        _shouldUseSelectedPetProfile(
-          messages: messages,
-          profile: selectedPetProfile,
-        )
+    final shouldUseSelectedPetProfile = _shouldUseSelectedPetProfile(
+      messages: messages,
+      profile: selectedPetProfile,
+    );
+    final effectiveSelectedPetProfile = shouldUseSelectedPetProfile
         ? selectedPetProfile
         : null;
     final selectedPetProfilePrompt = _buildSelectedPetProfilePrompt(
@@ -93,21 +142,18 @@ JSON 규칙:
       throw Exception('OpenAI 응답 파싱 실패');
     }
 
-    return _applyGeocodedCoordinates(
+    return _applyResponsePostProcessing(
       content: content.trim(),
       messages: messages,
+      selectedPetProfile: effectiveSelectedPetProfile,
     );
   }
 
-  Future<String> _applyGeocodedCoordinates({
+  Future<String> _applyResponsePostProcessing({
     required String content,
     required List<Map<String, String>> messages,
+    Map<String, dynamic>? selectedPetProfile,
   }) async {
-    final regionText = _extractRegionText(messages);
-    if (regionText == null || regionText.isEmpty) {
-      return content;
-    }
-
     final jsonRange = _findJsonRange(content);
     if (jsonRange == null) {
       return content;
@@ -121,6 +167,7 @@ JSON 규칙:
       }
 
       final normalized = Map<String, dynamic>.from(decoded);
+      _mergeSelectedPetProfile(normalized, selectedPetProfile);
       _applyQuestionDerivedFilters(
         normalized,
         latestUserText:
@@ -131,14 +178,80 @@ JSON 규칙:
             '',
       );
 
-      final geocoded = await _geocodingService.geocodeAddress(regionText);
-      normalized['mapX'] = geocoded['lng'];
-      normalized['mapY'] = geocoded['lat'];
+      final regionText = _extractRegionText(messages);
+      if (regionText != null && regionText.isNotEmpty) {
+        final geocoded = await _geocodingService.geocodeAddress(regionText);
+        normalized['mapX'] = geocoded['lng'];
+        normalized['mapY'] = geocoded['lat'];
+      }
 
       return '${content.substring(0, jsonRange.$1)}${jsonEncode(normalized)}${content.substring(jsonRange.$2)}';
     } catch (_) {
       return content;
     }
+  }
+
+  void _mergeSelectedPetProfile(
+    Map<String, dynamic> normalized,
+    Map<String, dynamic>? selectedPetProfile,
+  ) {
+    if (selectedPetProfile == null || selectedPetProfile.isEmpty) {
+      return;
+    }
+
+    const scalarKeys = <String>[
+      'petName',
+      'petAge',
+      'petGender',
+      'isNeutered',
+      'petBread',
+      'isFierceDog',
+      'petWeight',
+      'petSize',
+      'activityLevel',
+      'isOffLeash',
+      'indoorAllowed',
+      'parkingAvailable',
+    ];
+
+    for (final key in scalarKeys) {
+      final currentValue = normalized[key];
+      final profileValue = selectedPetProfile[key];
+      if (_isMissingJsonValue(currentValue) &&
+          !_isMissingJsonValue(profileValue)) {
+        normalized[key] = profileValue;
+      }
+    }
+
+    final currentChecklist = _normalizeStringList(
+      normalized['travelChecklist'],
+    );
+    final profileChecklist = _normalizeStringList(
+      selectedPetProfile['travelChecklist'],
+    );
+    if (currentChecklist.isEmpty && profileChecklist.isNotEmpty) {
+      normalized['travelChecklist'] = profileChecklist;
+    }
+  }
+
+  bool _isMissingJsonValue(dynamic value) {
+    if (value == null) {
+      return true;
+    }
+    if (value is String) {
+      return value.trim().isEmpty;
+    }
+    return false;
+  }
+
+  List<String> _normalizeStringList(dynamic value) {
+    if (value is! List) {
+      return const [];
+    }
+    return value
+        .map((item) => '$item'.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
   }
 
   void _applyQuestionDerivedFilters(
@@ -229,11 +342,20 @@ ${jsonEncode(normalized)}
       return null;
     }
 
+    final canonicalRegion = _findCanonicalRegionAlias(latestUserText);
+    if (canonicalRegion != null) {
+      return canonicalRegion;
+    }
+
     final normalizedText = _normalizeRegionAliases(latestUserText);
     final patterns = <RegExp>[
-      RegExp(r'([가-힣]+(?:특별시|광역시|특별자치시|도|특별자치도)\s*[가-힣]+(?:시|군|구))'),
-      RegExp(r'([가-힣]+(?:특별시|광역시|특별자치시|도|특별자치도))'),
-      RegExp(r'([가-힣]+(?:시|군|구))'),
+      RegExp(
+        '([가-힣]+(?:특별시|광역시|특별자치시|도|특별자치도)\\s*[가-힣]+(?:시|군|구))(?=${_regionSuffixPattern}(?:\\s|[,.!?]|\$))',
+      ),
+      RegExp(
+        '([가-힣]+(?:특별시|광역시|특별자치시|도|특별자치도))(?=${_regionSuffixPattern}(?:\\s|[,.!?]|\$))',
+      ),
+      RegExp('([가-힣]+(?:시|군|구))(?=${_regionSuffixPattern}(?:\\s|[,.!?]|\$))'),
     ];
 
     for (final pattern in patterns) {
@@ -284,39 +406,34 @@ ${jsonEncode(normalized)}
   }
 
   String _normalizeRegionAliases(String text) {
-    final aliases = <String, String>{
-      '서울 ': '서울특별시 ',
-      '서울시 ': '서울특별시 ',
-      '부산 ': '부산광역시 ',
-      '부산시 ': '부산광역시 ',
-      '대구 ': '대구광역시 ',
-      '대구시 ': '대구광역시 ',
-      '인천 ': '인천광역시 ',
-      '인천시 ': '인천광역시 ',
-      '광주 ': '광주광역시 ',
-      '광주시 ': '광주광역시 ',
-      '대전 ': '대전광역시 ',
-      '대전시 ': '대전광역시 ',
-      '울산 ': '울산광역시 ',
-      '울산시 ': '울산광역시 ',
-      '세종 ': '세종특별자치시 ',
-      '세종시 ': '세종특별자치시 ',
-      '경기 ': '경기도 ',
-      '강원 ': '강원특별자치도 ',
-      '충북 ': '충청북도 ',
-      '충남 ': '충청남도 ',
-      '전북 ': '전북특별자치도 ',
-      '전남 ': '전라남도 ',
-      '경북 ': '경상북도 ',
-      '경남 ': '경상남도 ',
-      '제주 ': '제주특별자치도 ',
-    };
+    var normalized = text;
+    final entries = _regionAliases.entries.toList()
+      ..sort((a, b) => b.key.length.compareTo(a.key.length));
 
-    var normalized = ' $text ';
-    aliases.forEach((from, to) {
-      normalized = normalized.replaceAll(from, to);
-    });
+    for (final entry in entries) {
+      normalized = normalized.replaceAllMapped(
+        RegExp(
+          '(^|\\s)(${RegExp.escape(entry.key)})(?=${_regionSuffixPattern}(?:\\s|[,.!?]|\$))',
+        ),
+        (match) => '${match.group(1) ?? ''}${entry.value}',
+      );
+    }
     return normalized.trim();
+  }
+
+  String? _findCanonicalRegionAlias(String text) {
+    final entries = _regionAliases.entries.toList()
+      ..sort((a, b) => b.key.length.compareTo(a.key.length));
+
+    for (final entry in entries) {
+      final pattern = RegExp(
+        '(^|\\s)${RegExp.escape(entry.key)}(?=${_regionSuffixPattern}(?:\\s|[,.!?]|\$))',
+      );
+      if (pattern.hasMatch(text)) {
+        return entry.value;
+      }
+    }
+    return null;
   }
 
   (int, int)? _findJsonRange(String content) {
