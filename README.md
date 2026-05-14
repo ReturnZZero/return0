@@ -195,12 +195,16 @@ return0/
 │   ├── windows/
 │   ├── pubspec.yaml
 │   └── pubspec.lock
+├── 📁 pet-policy-crawler/       # 반려견 정책 크롤링 파이프라인
+│   ├── crawlers.py
+│   ├── extractor.py
+│   ├── db_writer.py
+│   ├── pipeline.py
+│   ├── requirements.txt
+│   └── README.md
 ├── 📁 docs/                     # 발표자료 및 보고서
 ├── GroundRules.md
 └── README.md
-```
-
-> 데이터 수집·처리 파이프라인 (crawlers.py, extractor.py 등) 코드는 추후 업로드 예정입니다.
 
 ---
 
