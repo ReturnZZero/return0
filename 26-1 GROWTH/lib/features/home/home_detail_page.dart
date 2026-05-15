@@ -437,7 +437,7 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
       }
     }
 
-    return tags;
+    return tags.toSet().toList();
   }
 
   String _formatPlaceType(dynamic value) {

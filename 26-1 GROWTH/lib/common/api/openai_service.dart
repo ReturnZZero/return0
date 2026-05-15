@@ -95,18 +95,17 @@ JSON 규칙:
 
   Future<String> sendMessage({
     required List<Map<String, String>> messages,
+    List<Map<String, dynamic>> petProfiles = const [],
     Map<String, dynamic>? selectedPetProfile,
     String model = 'gpt-4o-mini',
   }) async {
-    final shouldUseSelectedPetProfile = _shouldUseSelectedPetProfile(
+    final matchedPetProfile = _resolveMatchedPetProfile(
       messages: messages,
-      profile: selectedPetProfile,
+      petProfiles: petProfiles,
+      selectedPetProfile: selectedPetProfile,
     );
-    final effectiveSelectedPetProfile = shouldUseSelectedPetProfile
-        ? selectedPetProfile
-        : null;
     final selectedPetProfilePrompt = _buildSelectedPetProfilePrompt(
-      effectiveSelectedPetProfile,
+      matchedPetProfile,
     );
     final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
     final response = await _client.post(
@@ -145,7 +144,7 @@ JSON 규칙:
     return _applyResponsePostProcessing(
       content: content.trim(),
       messages: messages,
-      selectedPetProfile: effectiveSelectedPetProfile,
+      selectedPetProfile: matchedPetProfile,
     );
   }
 
@@ -379,30 +378,48 @@ ${jsonEncode(normalized)}
     return null;
   }
 
-  bool _shouldUseSelectedPetProfile({
+  Map<String, dynamic>? _resolveMatchedPetProfile({
     required List<Map<String, String>> messages,
-    Map<String, dynamic>? profile,
+    required List<Map<String, dynamic>> petProfiles,
+    Map<String, dynamic>? selectedPetProfile,
   }) {
-    if (profile == null || profile.isEmpty) {
-      return false;
+    final latestUserText = _latestUserText(messages);
+    if (latestUserText.isEmpty) {
+      return null;
     }
 
-    final petName = '${profile['petName'] ?? ''}'.trim();
-    if (petName.isEmpty) {
-      return false;
+    final candidates = <Map<String, dynamic>>[
+      ...petProfiles,
+      if (selectedPetProfile != null && selectedPetProfile.isNotEmpty)
+        selectedPetProfile,
+    ];
+    candidates.sort((a, b) {
+      final aName = '${a['petName'] ?? ''}'.trim();
+      final bName = '${b['petName'] ?? ''}'.trim();
+      return bName.length.compareTo(aName.length);
+    });
+
+    for (final candidate in candidates) {
+      final petName = '${candidate['petName'] ?? ''}'.trim();
+      if (petName.isEmpty) {
+        continue;
+      }
+      if (latestUserText.contains(petName)) {
+        return candidate;
+      }
     }
 
+    return null;
+  }
+
+  String _latestUserText(List<Map<String, String>> messages) {
     final userMessages = messages.where((m) => m['role'] == 'user').toList();
     if (userMessages.isEmpty) {
-      return false;
+      return '';
     }
 
     final latestUserText = '${userMessages.last['content'] ?? ''}'.trim();
-    if (latestUserText.isEmpty) {
-      return false;
-    }
-
-    return latestUserText.contains(petName);
+    return latestUserText;
   }
 
   String _normalizeRegionAliases(String text) {

@@ -24,13 +24,14 @@ class _AiChatPageState extends State<AiChatPage>
   final _petProfileService = const PetProfileService();
   final _firestoreService = FirestoreService();
   final List<_ChatMessage> _messages = [];
+  List<Map<String, dynamic>> _petProfiles = const [];
   Map<String, dynamic>? _selectedPetProfile;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSelectedPetProfile();
+    _loadPetProfiles();
   }
 
   @override
@@ -65,6 +66,7 @@ class _AiChatPageState extends State<AiChatPage>
 
       final reply = await _openAiService.sendMessage(
         messages: history,
+        petProfiles: _petProfiles,
         selectedPetProfile: _selectedPetProfile,
       );
       final recommendations = await _fetchFirestoreRecommendations(reply);
@@ -98,12 +100,16 @@ class _AiChatPageState extends State<AiChatPage>
     }
   }
 
-  Future<void> _loadSelectedPetProfile() async {
+  Future<void> _loadPetProfiles() async {
+    final profiles = await _petProfileService.loadPetProfiles();
     final profile = await _petProfileService.loadSelectedPetProfile();
     if (!mounted) {
       return;
     }
-    setState(() => _selectedPetProfile = profile);
+    setState(() {
+      _petProfiles = profiles;
+      _selectedPetProfile = profile;
+    });
   }
 
   Future<List<Map<String, dynamic>>> _fetchFirestoreRecommendations(
