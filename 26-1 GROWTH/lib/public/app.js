@@ -44,6 +44,9 @@ const resetFormButton = document.getElementById("reset-form");
 const lookupByTitleButton = document.getElementById("lookup-by-title");
 const updatePlaceButton = document.getElementById("update-place");
 const deletePlaceButton = document.getElementById("delete-place");
+const lookupModal = document.getElementById("lookup-modal");
+const closeLookupModalButton = document.getElementById("close-lookup-modal");
+const lookupResultList = document.getElementById("lookup-result-list");
 const sidoSelect = document.getElementById("sidoSelect");
 const sigunguSelect = document.getElementById("sigunguSelect");
 const sidoCodeInput = document.getElementById("seedRegionSidoCode");
@@ -52,10 +55,59 @@ const sigunguCodeInput = document.getElementById("seedRegionSigunguCode");
 const sigunguNameInput = document.getElementById("seedRegionSigunguName");
 
 let regions = fallbackRegions;
+let lookupResults = [];
 
 function setStatus(message, isError = false) {
   status.textContent = message;
   status.classList.toggle("error", isError);
+}
+
+function closeLookupModal() {
+  lookupModal.classList.remove("open");
+  lookupResultList.innerHTML = "";
+  lookupResults = [];
+}
+
+function handleLookupResultSelect(index) {
+  const selected = lookupResults[index];
+  if (!selected) {
+    return;
+  }
+
+  setFormFromPlaceData(selected.data);
+  closeLookupModal();
+  setStatus(
+    `조회 완료\n문서 ID: ${selected.data.contentId || selected.id}\n장소명: ${selected.data.title || ""}`,
+  );
+}
+
+function openLookupModal(results) {
+  lookupResults = results;
+  lookupResultList.innerHTML = "";
+
+  for (const [index, result] of results.entries()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "result-item";
+    button.addEventListener("click", () => handleLookupResultSelect(index));
+
+    const title = document.createElement("span");
+    title.className = "result-title";
+    title.textContent = result.data.title || "(제목 없음)";
+
+    const meta = document.createElement("span");
+    meta.className = "result-meta";
+    const addr = result.data.addr1 || "주소 없음";
+    const region = [result.data.seedRegionSidoName, result.data.seedRegionSigunguName]
+      .filter(Boolean)
+      .join(" ");
+    meta.textContent = `문서 ID: ${result.data.contentId || result.id}\n주소: ${addr}${region ? `\n지역: ${region}` : ""}`;
+
+    button.append(title, meta);
+    lookupResultList.append(button);
+  }
+
+  lookupModal.classList.add("open");
 }
 
 function buildRegionApiUrl() {
@@ -237,6 +289,7 @@ function setFormFromPlaceData(data) {
   document.getElementById("title").value = data.title || "";
   document.getElementById("addr1").value = data.addr1 || "";
   document.getElementById("firstimage").value = data.firstimage || "";
+  document.getElementById("updateDate").value = data.updateDate || "";
   document.getElementById("mapX").value =
     data.mapX === undefined || data.mapX === null ? "" : data.mapX;
   document.getElementById("mapY").value =
@@ -265,6 +318,7 @@ function buildPayload() {
     title: String(formData.get("title") || "").trim(),
     addr1: String(formData.get("addr1") || "").trim(),
     firstimage: String(formData.get("firstimage") || "").trim(),
+    updateDate: String(formData.get("updateDate") || "").trim(),
     addr2: "",
     mapX: Number(formData.get("mapX")),
     mapY: Number(formData.get("mapY")),
@@ -307,6 +361,9 @@ function validatePayload(payload) {
   }
   if (!payload.seedRegionSidoCode || !payload.seedRegionSigunguCode) {
     throw new Error("지역 선택은 필수입니다.");
+  }
+  if (payload.updateDate && !/^\d{8}$/.test(payload.updateDate)) {
+    throw new Error("업데이트 날짜는 yyyyMMdd 형식의 8자리 숫자여야 합니다.");
   }
 }
 
@@ -455,25 +512,31 @@ async function handleLookupByTitle() {
 
     const snapshot = await db
       .collection("tour_places")
-      .where("title", "==", title)
+      .orderBy("title")
+      .startAt(title)
+      .endAt(`${title}\uf8ff`)
       .get();
 
     if (snapshot.empty) {
       throw new Error("해당 장소명으로 저장된 문서를 찾지 못했습니다.");
     }
 
-    const docs = snapshot.docs;
-    const data = docs[0].data() || {};
-    setFormFromPlaceData(data);
+    const results = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: doc.data() || {},
+    }));
 
-    const duplicateMessage =
-      docs.length > 1
-        ? `\n동일한 장소명이 ${docs.length}건 있어 첫 번째 문서를 불러왔습니다.`
-        : "";
+    if (results.length === 1) {
+      const selected = results[0];
+      setFormFromPlaceData(selected.data);
+      setStatus(
+        `조회 완료\n문서 ID: ${selected.data.contentId || selected.id}\n장소명: ${selected.data.title || title}`,
+      );
+      return;
+    }
 
-    setStatus(
-      `조회 완료\n문서 ID: ${data.contentId || docs[0].id}\n장소명: ${data.title || title}${duplicateMessage}`,
-    );
+    openLookupModal(results);
+    setStatus(`조회 결과 ${results.length}건\n팝업에서 불러올 장소를 선택해주세요.`);
   } catch (error) {
     console.error(error);
     setStatus(
@@ -510,6 +573,12 @@ function bindEvents() {
   lookupByTitleButton.addEventListener("click", handleLookupByTitle);
   updatePlaceButton.addEventListener("click", handleUpdate);
   deletePlaceButton.addEventListener("click", handleDelete);
+  closeLookupModalButton.addEventListener("click", closeLookupModal);
+  lookupModal.addEventListener("click", (event) => {
+    if (event.target === lookupModal) {
+      closeLookupModal();
+    }
+  });
 }
 
 async function init() {
