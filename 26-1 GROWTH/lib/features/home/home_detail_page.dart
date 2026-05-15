@@ -123,6 +123,14 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
     }
   }
 
+  String _formatUpdateDate(dynamic value) {
+    final raw = '$value'.trim();
+    if (RegExp(r'^\d{8}$').hasMatch(raw)) {
+      return '${raw.substring(0, 4)}.${raw.substring(4, 6)}.${raw.substring(6, 8)}';
+    }
+    return '2026.05.07';
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = '${widget.item['title'] ?? '이름 없음'}';
@@ -132,6 +140,7 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
     final homepage = '${widget.item['homepage'] ?? ''}'.trim();
     final overviewRaw = '${widget.item['overview'] ?? ''}'.trim();
     final overview = overviewRaw.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+    final updateDate = _formatUpdateDate(widget.item['updateDate']);
     final shopInfoItems = _buildShopInfoItems(widget.item);
     final shopInfoTags = _buildShopInfoTags(widget.item);
 
@@ -174,6 +183,8 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
                 address.isEmpty ? '주소 정보 없음' : address,
                 style: const TextStyle(color: Colors.black54),
               ),
+              const SizedBox(height: 8),
+              _InfoRow(label: '업데이트', value: updateDate),
               if (tel.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _InfoRow(label: '전화', value: tel),
