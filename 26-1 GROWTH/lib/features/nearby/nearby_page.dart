@@ -17,6 +17,11 @@ class NearbyPage extends StatefulWidget {
 
 class _NearbyPageState extends State<NearbyPage> {
   static const int _defaultSearchRadius = 4000;
+  static const int _gapyeongSearchRadius = 10506;
+  static const LatLng _gapyeongSearchCenter = LatLng(
+    37.75227119679332,
+    127.52096123993397,
+  );
 
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
@@ -314,12 +319,15 @@ class _NearbyPageState extends State<NearbyPage> {
       return;
     }
     try {
-      final target = await _mapService.geocodeAddress(
-        '${_selectedSidoName} ${_selectedSigunguName}',
-      );
+      final searchRadius = _regionSearchRadius();
+      final target = _isGapyeongRegion()
+          ? _gapyeongSearchCenter
+          : await _mapService.geocodeAddress(
+              '${_selectedSidoName} ${_selectedSigunguName}',
+            );
       _mapCenter = target;
-      await _animateToRadius(target, _defaultSearchRadius.toDouble());
-      await _searchAt(target, radius: _defaultSearchRadius);
+      await _animateToRadius(target, searchRadius.toDouble());
+      await _searchAt(target, radius: searchRadius);
     } catch (_) {
       if (!mounted) {
         return;
@@ -328,6 +336,14 @@ class _NearbyPageState extends State<NearbyPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text('주소 좌표 변환에 실패했어요.')));
     }
+  }
+
+  bool _isGapyeongRegion() {
+    return _selectedSidoName.contains('경기') && _selectedSigunguName == '가평군';
+  }
+
+  int _regionSearchRadius() {
+    return _isGapyeongRegion() ? _gapyeongSearchRadius : _defaultSearchRadius;
   }
 
   Future<void> _animateToRadius(LatLng center, double radiusMeters) async {
