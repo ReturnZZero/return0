@@ -13,6 +13,7 @@ class FirestoreService {
   static const String tourPlacesCollection = 'tour_places';
   static const String userProfilesCollection = 'user_profiles';
   static const String reviewsCollection = 'reviews';
+  static const String reportsCollection = 'reports';
   static const int _maxBatchSize = 400;
   static final Random _random = Random();
   static final ValueNotifier<int> nicknameTick = ValueNotifier<int>(0);
@@ -84,6 +85,29 @@ class FirestoreService {
     }, SetOptions(merge: true));
 
     await batch.commit();
+  }
+
+  Future<void> addPlaceReport({
+    required String placeId,
+    required String userId,
+    required String message,
+  }) async {
+    final now = DateTime.now();
+    final reportId =
+        '${now.year.toString().padLeft(4, '0')}'
+        '${now.month.toString().padLeft(2, '0')}'
+        '${now.day.toString().padLeft(2, '0')}'
+        '${now.hour.toString().padLeft(2, '0')}'
+        '${now.minute.toString().padLeft(2, '0')}'
+        '${now.second.toString().padLeft(2, '0')}';
+
+    await _firestore.collection(reportsCollection).doc(reportId).set({
+      'contentId': placeId,
+      'userId': userId,
+      'message': message.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'reportId': reportId,
+    });
   }
 
   Future<List<Map<String, dynamic>>> attachReviewCounts(

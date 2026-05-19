@@ -18,8 +18,10 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
   final _favoriteService = const FavoriteService();
   final _firestoreService = FirestoreService();
   final _reviewController = TextEditingController();
+  final _reportController = TextEditingController();
   bool _isFavorite = false;
   bool _isSubmittingReview = false;
+  bool _isSubmittingReport = false;
   String _nickname = '';
 
   @override
@@ -32,6 +34,7 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
   @override
   void dispose() {
     _reviewController.dispose();
+    _reportController.dispose();
     super.dispose();
   }
 
@@ -123,6 +126,86 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
     }
   }
 
+  Future<void> _showReportDialog() async {
+    final user = _authService.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('로그인 후 신고할 수 있어요.')));
+      return;
+    }
+
+    _reportController.clear();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> submitReport() async {
+              final message = _reportController.text.trim();
+              if (message.isEmpty || _isSubmittingReport) {
+                return;
+              }
+
+              setDialogState(() => _isSubmittingReport = true);
+              try {
+                await _firestoreService.addPlaceReport(
+                  placeId: _placeId,
+                  userId: user.uid,
+                  message: message,
+                );
+                _reportController.clear();
+                if (!mounted) {
+                  return;
+                }
+                Navigator.of(dialogContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('신고를 접수했어요.')),
+                );
+              } catch (error) {
+                if (!mounted) {
+                  return;
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('신고 접수에 실패했어요: $error')),
+                );
+              } finally {
+                if (mounted) {
+                  setDialogState(() => _isSubmittingReport = false);
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('신고하기'),
+              content: TextField(
+                controller: _reportController,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  hintText: '신고 내용을 입력해주세요.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: _isSubmittingReport
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('취소'),
+                ),
+                FilledButton(
+                  onPressed: _isSubmittingReport ? null : submitReport,
+                  child: Text(_isSubmittingReport ? '신고 중...' : '신고'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   String _formatUpdateDate(dynamic value) {
     final raw = '$value'.trim();
     if (RegExp(r'^\d{8}$').hasMatch(raw)) {
@@ -171,20 +254,37 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          address.isEmpty ? '주소 정보 없음' : address,
+                          style: const TextStyle(color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton(
+                    onPressed: _showReportDialog,
+                    child: const Text('신고'),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
-              Text(
-                address.isEmpty ? '주소 정보 없음' : address,
-                style: const TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 8),
-              _InfoRow(label: '업데이트', value: updateDate),
+              _InfoRow(label: '최종 정보 업데이트', value: updateDate),
               if (tel.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _InfoRow(label: '전화', value: tel),
