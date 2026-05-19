@@ -44,6 +44,7 @@ const resetFormButton = document.getElementById("reset-form");
 const lookupByTitleButton = document.getElementById("lookup-by-title");
 const updatePlaceButton = document.getElementById("update-place");
 const deletePlaceButton = document.getElementById("delete-place");
+const loadingOverlay = document.getElementById("loading-overlay");
 const lookupModal = document.getElementById("lookup-modal");
 const closeLookupModalButton = document.getElementById("close-lookup-modal");
 const lookupResultList = document.getElementById("lookup-result-list");
@@ -60,6 +61,10 @@ let lookupResults = [];
 function setStatus(message, isError = false) {
   status.textContent = message;
   status.classList.toggle("error", isError);
+}
+
+function setLoading(isLoading) {
+  loadingOverlay.classList.toggle("open", isLoading);
 }
 
 function closeLookupModal() {
@@ -582,9 +587,14 @@ function bindEvents() {
 }
 
 async function init() {
-  await loadRegions();
-  bindEvents();
-  resetForm();
+  setLoading(true);
+  try {
+    await loadRegions();
+    bindEvents();
+    resetForm();
+  } finally {
+    setLoading(false);
+  }
 }
 
 init();
