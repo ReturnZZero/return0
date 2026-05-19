@@ -111,6 +111,56 @@
         flex: 1;
       }
 
+      .checkbox-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 12px;
+      }
+
+      .check-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1px solid #e6dcc0;
+        border-radius: 14px;
+        background: #fffaf0;
+      }
+
+      .check-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+      }
+
+      .check-item label {
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .choice-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .choice-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1px solid #e6dcc0;
+        border-radius: 14px;
+        background: #fffaf0;
+      }
+
+      .choice-item input[type="radio"] {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+      }
+
       .actions {
         display: flex;
         gap: 10px;
@@ -402,6 +452,82 @@
                     pattern="[0-9]{8}"
                     placeholder="yyyyMMdd"
                   />
+                </div>
+
+                <div class="field full">
+                  <label>동반 조건</label>
+                  <div class="checkbox-grid">
+                    <div class="check-item">
+                      <input
+                        id="indoorAllowed"
+                        name="indoorAllowed"
+                        type="checkbox"
+                      />
+                      <label for="indoorAllowed">실내 동반 가능</label>
+                    </div>
+
+                    <div class="check-item">
+                      <input
+                        id="parkingAvailable"
+                        name="parkingAvailable"
+                        type="checkbox"
+                      />
+                      <label for="parkingAvailable">주차 가능</label>
+                    </div>
+
+                    <div class="check-item">
+                      <input
+                        id="leashRequired"
+                        name="leashRequired"
+                        type="checkbox"
+                      />
+                      <label for="leashRequired">목줄 필수</label>
+                    </div>
+
+                    <div class="check-item">
+                      <input
+                        id="outdoorOnly"
+                        name="outdoorOnly"
+                        type="checkbox"
+                      />
+                      <label for="outdoorOnly">야외</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field full">
+                  <label>펫 사이즈 petSize</label>
+                  <div class="choice-grid">
+                    <div class="choice-item">
+                      <input
+                        id="petSizeS"
+                        name="petSize"
+                        type="radio"
+                        value="S"
+                      />
+                      <label for="petSizeS">소형견</label>
+                    </div>
+
+                    <div class="choice-item">
+                      <input
+                        id="petSizeM"
+                        name="petSize"
+                        type="radio"
+                        value="M"
+                      />
+                      <label for="petSizeM">중형견</label>
+                    </div>
+
+                    <div class="choice-item">
+                      <input
+                        id="petSizeL"
+                        name="petSize"
+                        type="radio"
+                        value="L"
+                      />
+                      <label for="petSizeL">대형견</label>
+                    </div>
+                  </div>
                 </div>
               </div>
 

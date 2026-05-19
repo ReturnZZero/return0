@@ -294,7 +294,23 @@ function setFormFromPlaceData(data) {
   document.getElementById("title").value = data.title || "";
   document.getElementById("addr1").value = data.addr1 || "";
   document.getElementById("firstimage").value = data.firstimage || "";
-  document.getElementById("updateDate").value = data.updateDate || "";
+  document.getElementById("updateDate").value = data.updateDate || "20260507";
+  document.getElementById("indoorAllowed").checked = !!data.indoorAllowed;
+  document.getElementById("parkingAvailable").checked = !!data.parkingAvailable;
+  document.getElementById("leashRequired").checked = !!data.leashRequired;
+  document.getElementById("outdoorOnly").checked =
+    !!data.outdoorOnly ||
+    (Array.isArray(data.travelChecklist) &&
+      data.travelChecklist.some((item) => String(item).trim() === "야외"));
+  const petSize = String(data.petSize || "").toUpperCase();
+  const petSizeRadio = form.querySelector(`input[name="petSize"][value="${petSize}"]`);
+  if (petSizeRadio) {
+    petSizeRadio.checked = true;
+  } else {
+    for (const radio of form.querySelectorAll('input[name="petSize"]')) {
+      radio.checked = false;
+    }
+  }
   document.getElementById("mapX").value =
     data.mapX === undefined || data.mapX === null ? "" : data.mapX;
   document.getElementById("mapY").value =
@@ -317,6 +333,12 @@ function setFormFromPlaceData(data) {
 
 function buildPayload() {
   const formData = new FormData(form);
+  const isOutdoorOnly = formData.get("outdoorOnly") === "on";
+  const travelChecklist = [];
+
+  if (isOutdoorOnly) {
+    travelChecklist.push("야외");
+  }
 
   const payload = {
     contentId: String(formData.get("contentId") || "").trim(),
@@ -338,11 +360,12 @@ function buildPayload() {
     homepage: "",
     reviewCount: 0,
     isFierceDog: false,
-    indoorAllowed: false,
-    parkingAvailable: false,
-    leashRequired: true,
-    petSize: "L",
-    travelChecklist: [],
+    indoorAllowed: formData.get("indoorAllowed") === "on",
+    outdoorOnly: isOutdoorOnly,
+    parkingAvailable: formData.get("parkingAvailable") === "on",
+    leashRequired: formData.get("leashRequired") === "on",
+    petSize: String(formData.get("petSize") || "").trim().toUpperCase(),
+    travelChecklist,
   };
 
   return payload;
