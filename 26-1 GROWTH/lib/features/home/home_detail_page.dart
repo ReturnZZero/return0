@@ -299,7 +299,7 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
                 ],
               ),
               const SizedBox(height: 8),
-              _InfoRow(label: '최종 정보 업데이트', value: updateDate),
+              _InfoRow(label: '업데이트', value: updateDate),
               if (tel.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _InfoRow(label: '전화번호', value: tel),
