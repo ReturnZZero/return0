@@ -214,6 +214,21 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
     return '2026.05.07';
   }
 
+  bool? _parseBool(dynamic value) {
+    if (value is bool) {
+      return value;
+    }
+
+    final text = '$value'.trim().toLowerCase();
+    if (text == 'true') {
+      return true;
+    }
+    if (text == 'false') {
+      return false;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = '${widget.item['title'] ?? '이름 없음'}';
@@ -287,7 +302,7 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
               _InfoRow(label: '최종 정보 업데이트', value: updateDate),
               if (tel.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                _InfoRow(label: '전화', value: tel),
+                _InfoRow(label: '전화번호', value: tel),
               ],
               if (homepage.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -512,6 +527,16 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
       items.add(_DetailInfoItem(label: '입장가능', value: petSize));
     }
 
+    final isFierceDog = _parseBool(item['isFierceDog']);
+    if (isFierceDog != null) {
+      items.add(
+        _DetailInfoItem(
+          label: '맹견 가능 여부',
+          value: isFierceDog ? '가능' : '불가',
+        ),
+      );
+    }
+
     return items;
   }
 
@@ -519,16 +544,16 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
     final tags = <String>[];
     final petSize = '${item['petSize'] ?? ''}'.trim().toUpperCase();
 
-    if (item['indoorAllowed'] == true) {
+    if (_parseBool(item['indoorAllowed']) == true) {
       tags.add('실내 이용 가능');
     }
-    if (item['parkingAvailable'] == true) {
+    if (_parseBool(item['parkingAvailable']) == true) {
       tags.add('주차 가능');
     }
-    if (item['leashRequired'] == true) {
+    if (_parseBool(item['leashRequired']) == true) {
       tags.add('목줄 필수');
     }
-    if (item['isFierceDog'] == true) {
+    if (_parseBool(item['isFierceDog']) == true) {
       tags.add('맹견 가능');
     }
     if (petSize == 'L') {

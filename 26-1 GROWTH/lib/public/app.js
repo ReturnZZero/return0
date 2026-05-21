@@ -293,11 +293,13 @@ function setFormFromPlaceData(data) {
   document.getElementById("contentId").value = data.contentId || "";
   document.getElementById("title").value = data.title || "";
   document.getElementById("addr1").value = data.addr1 || "";
+  document.getElementById("tel").value = data.tel || "";
   document.getElementById("firstimage").value = data.firstimage || "";
   document.getElementById("updateDate").value = data.updateDate || "20260507";
   document.getElementById("indoorAllowed").checked = !!data.indoorAllowed;
   document.getElementById("parkingAvailable").checked = !!data.parkingAvailable;
   document.getElementById("leashRequired").checked = !!data.leashRequired;
+  document.getElementById("isFierceDog").checked = !!data.isFierceDog;
   document.getElementById("outdoorOnly").checked =
     !!data.outdoorOnly ||
     (Array.isArray(data.travelChecklist) &&
@@ -344,6 +346,7 @@ function buildPayload() {
     contentId: String(formData.get("contentId") || "").trim(),
     title: String(formData.get("title") || "").trim(),
     addr1: String(formData.get("addr1") || "").trim(),
+    tel: String(formData.get("tel") || "").trim(),
     firstimage: String(formData.get("firstimage") || "").trim(),
     updateDate: String(formData.get("updateDate") || "").trim(),
     addr2: "",
@@ -356,10 +359,9 @@ function buildPayload() {
     seedRegionSigunguCode: sigunguCodeInput.value,
     seedRegionSigunguName: sigunguNameInput.value,
     overview: "",
-    tel: "",
     homepage: "",
     reviewCount: 0,
-    isFierceDog: false,
+    isFierceDog: formData.get("isFierceDog") === "on",
     indoorAllowed: formData.get("indoorAllowed") === "on",
     outdoorOnly: isOutdoorOnly,
     parkingAvailable: formData.get("parkingAvailable") === "on",
