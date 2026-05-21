@@ -160,16 +160,16 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
                   return;
                 }
                 Navigator.of(dialogContext).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('신고를 접수했어요.')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('신고를 접수했어요.')));
               } catch (error) {
                 if (!mounted) {
                   return;
                 }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('신고 접수에 실패했어요: $error')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('신고 접수에 실패했어요: $error')));
               } finally {
                 if (mounted) {
                   setDialogState(() => _isSubmittingReport = false);
@@ -527,16 +527,6 @@ class _HomeDetailPageState extends State<HomeDetailPage> {
       items.add(_DetailInfoItem(label: '입장가능', value: petSize));
     }
 
-    final isFierceDog = _parseBool(item['isFierceDog']);
-    if (isFierceDog != null) {
-      items.add(
-        _DetailInfoItem(
-          label: '맹견 가능 여부',
-          value: isFierceDog ? '가능' : '불가',
-        ),
-      );
-    }
-
     return items;
   }
 
@@ -668,7 +658,7 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
           width: 64,
