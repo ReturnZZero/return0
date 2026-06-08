@@ -211,8 +211,7 @@ return0/
 ---
 
 ## 📄 Poster Session
-![Poster]
-(https://github.com/ReturnZZero/return0/blob/main/docs/%E1%84%8C%E1%85%A9%E1%86%AF%E1%84%91%E1%85%B3%20%E1%84%91%E1%85%A9%E1%84%89%E1%85%B3%E1%84%90%E1%85%A5%E1%84%89%E1%85%A6%E1%84%89%E1%85%A7%E1%86%AB.png)
+![Poster](https://github.com/ReturnZZero/return0/blob/main/docs/%E1%84%8C%E1%85%A9%E1%86%AF%E1%84%91%E1%85%B3%20%E1%84%91%E1%85%A9%E1%84%89%E1%85%B3%E1%84%90%E1%85%A5%E1%84%89%E1%85%A6%E1%84%89%E1%85%A7%E1%86%AB.png)
 
 ## 📎 관련 문서 (Documents)
 
