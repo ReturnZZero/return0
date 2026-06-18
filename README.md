@@ -64,7 +64,7 @@ AI 기반 여행 상담 챗봇과 위치 기반 서비스를 결합하여
 
 ## 🏗️ 시스템 아키텍처 (System Architecture)
 
-![System Architecture](https://raw.githubusercontent.com/ReturnZZero/return0/main/docs/System%20Architecture.png)
+![System Architecture](https://github.com/ReturnZZero/return0/blob/main/docs/System%20Architecture.png)
 
 ---
 
