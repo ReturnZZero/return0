@@ -205,6 +205,259 @@ return0/
 ├── 📁 docs/                     # 발표자료 및 보고서
 ├── GroundRules.md
 └── README.md
+```
+
+---
+
+## 🚀 실행 및 재현 방법 (Install / Build / Run / Test)
+
+본 프로젝트는 **Flutter 기반 모바일 앱**과 **Python 기반 데이터 파이프라인**으로 구성되어 있습니다.  
+아래 절차를 따르면 GitHub Repository를 clone한 뒤 프로젝트를 설치하고 실행할 수 있습니다.
+
+---
+
+### 1. Repository Clone
+
+```bash
+git clone https://github.com/ReturnZZero/return0.git
+cd return0
+```
+
+---
+
+### 2. Flutter App 설치 방법 (How to Install)
+
+Flutter 앱 실행에 필요한 패키지를 설치합니다.
+
+```bash
+cd "26-1 GROWTH"
+flutter pub get
+```
+
+Flutter가 설치되어 있지 않은 경우, 먼저 Flutter SDK를 설치해야 합니다.  
+본 프로젝트는 **Flutter**와 **Dart** 기반으로 개발되었습니다.
+
+---
+
+### 3. Flutter App 빌드 방법 (How to Build)
+
+Android APK 파일을 생성하려면 다음 명령어를 실행합니다.
+
+```bash
+cd "26-1 GROWTH"
+flutter build apk
+```
+
+iOS 빌드는 macOS와 Xcode 환경에서 가능합니다.
+
+```bash
+cd "26-1 GROWTH"
+flutter build ios
+```
+
+---
+
+### 4. Flutter App 실행 방법 (How to Run)
+
+연결된 emulator 또는 실제 기기에서 앱을 실행합니다.
+
+```bash
+cd "26-1 GROWTH"
+flutter run
+```
+
+앱 실행 전 Firebase 및 Google Maps API 설정이 필요합니다.
+
+| 플랫폼 | 필요한 파일 |
+|---|---|
+| Android | `android/app/google-services.json` |
+| iOS | `ios/Runner/GoogleService-Info.plist` |
+| Flutter | `lib/firebase_options.dart` |
+
+> 보안상의 이유로 실제 Firebase 설정 파일과 API Key는 GitHub에 업로드하지 않습니다.  
+> 재현이 필요한 경우, 별도의 Firebase 프로젝트를 생성한 뒤 위 설정 파일을 추가해야 합니다.
+
+---
+
+### 5. 환경변수 설정 (Environment Variables)
+
+본 프로젝트는 외부 API 사용을 위해 API Key 설정이 필요합니다.  
+Repository에 포함된 `.env.example` 파일을 참고하여 `.env` 파일을 생성합니다.
+
+```bash
+cp .env.example .env
+```
+
+`.env` 파일에는 다음과 같은 값이 필요합니다.
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+NAVER_CLIENT_ID=your_naver_client_id
+NAVER_CLIENT_SECRET=your_naver_client_secret
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+TOUR_API_KEY=your_tour_api_key
+```
+
+> 실제 API Key는 개인정보 및 보안 문제로 GitHub에 업로드하지 않습니다.
+
+---
+
+### 6. 데이터 파이프라인 설치 방법
+
+반려동물 동반 정책 정보를 수집하고 정형화하는 Python 기반 데이터 파이프라인은  
+`pet-policy-crawler` 폴더에 포함되어 있습니다.
+
+```bash
+cd pet-policy-crawler
+pip install -r requirements.txt
+```
+
+---
+
+### 7. 데이터 파이프라인 실행 방법
+
+크롤링 및 정책 추출 파이프라인을 실행하려면 다음 명령어를 사용합니다.
+
+```bash
+cd pet-policy-crawler
+python pipeline.py
+```
+
+파이프라인은 TourAPI, 웹 문서, 블로그 등의 정보를 기반으로  
+반려동물 동반 가능 여부와 세부 정책 정보를 추출합니다.
+
+추출된 데이터는 구조화된 형태로 변환된 뒤  
+Firestore DB에 저장되거나 JSON 파일 형태로 확인할 수 있습니다.
+
+---
+
+### 8. 테스트 방법 (How to Test)
+
+#### Flutter App 테스트
+
+```bash
+cd "26-1 GROWTH"
+flutter run
+```
+
+앱 실행 후 다음 항목을 확인합니다.
+
+| 테스트 항목 | 확인 내용 |
+|---|---|
+| 반려동물 프로필 등록 | 이름, 크기, 활동성, 맹견 여부 등이 정상적으로 저장되는지 확인 |
+| 지도 화면 | 반려동물 동반 장소 목록이 지도에 표시되는지 확인 |
+| 장소 상세 페이지 | 체중 제한, 실내 동반 가능 여부, 목줄 착용 여부 등이 표시되는지 확인 |
+| AI 챗봇 | 자연어 질문 입력 시 Firestore DB 기반 추천 결과가 출력되는지 확인 |
+
+AI 챗봇 예시 질문은 다음과 같습니다.
+
+```text
+소형견이랑 실내 이용 가능한 카페 추천해줘
+```
+
+---
+
+#### 데이터 파이프라인 테스트
+
+```bash
+cd pet-policy-crawler
+python pipeline.py
+```
+
+실행 후 장소 정책 데이터가 정상적으로 추출되는지 확인합니다.
+
+| 확인 항목 | 설명 |
+|---|---|
+| 장소명 | 장소 이름이 정상적으로 수집되었는지 확인 |
+| 주소 | 장소 주소가 포함되어 있는지 확인 |
+| 반려동물 동반 가능 여부 | 동반 가능 여부가 추출되었는지 확인 |
+| 체중 제한 | 소형견, 중형견, 대형견 제한 정보가 추출되었는지 확인 |
+| 실내 동반 가능 여부 | 실내 또는 테라스 이용 가능 여부가 구분되는지 확인 |
+| 신뢰도 점수 | Confidence Score가 계산되는지 확인 |
+| 검토 상태 | NEEDS_REVIEW 여부가 분류되는지 확인 |
+
+---
+
+## 🧪 샘플 데이터 (Sample Data)
+
+본 프로젝트는 반려동물 동반 장소 추천을 위해 장소 데이터가 필요합니다.  
+실제 서비스 데이터는 Firestore DB에 저장되며, GitHub Repository에는 재현 및 테스트를 위한 샘플 데이터를 포함합니다.
+
+샘플 데이터 경로는 다음과 같습니다.
+
+```text
+pet-policy-crawler/sample_data/sample_places.json
+```
+
+샘플 데이터는 다음과 같은 필드를 포함합니다.
+
+| 필드 | 설명 |
+|---|---|
+| `name` | 장소명 |
+| `category` | 장소 분류 |
+| `address` | 주소 |
+| `mapX` | 경도 |
+| `mapY` | 위도 |
+| `petSize` | 허용 반려견 크기 |
+| `indoorAllowed` | 실내 동반 가능 여부 |
+| `leashRequired` | 목줄 착용 필요 여부 |
+| `isFierceDogAllowed` | 맹견 동반 가능 여부 |
+| `sourceUrl` | 정보 출처 |
+| `confidenceScore` | 데이터 신뢰도 점수 |
+| `reviewStatus` | 관리자 검토 상태 |
+
+---
+
+## 🗄️ 데이터베이스 구조 (Database Structure)
+
+본 프로젝트는 Firebase Firestore를 사용하여 사용자, 반려동물, 장소, 북마크, 챗봇 기록 데이터를 저장합니다.
+
+| Collection | 설명 |
+|---|---|
+| `users` | 사용자 계정 및 기본 정보 |
+| `pets` | 반려동물 프로필 정보 |
+| `places` | 반려동물 동반 장소 정보 |
+| `bookmarks` | 사용자가 저장한 관심 장소 |
+| `chatLogs` | 챗봇 질문 및 추천 기록 |
+| `reviewQueue` | NEEDS_REVIEW 상태의 관리자 검토 대상 데이터 |
+
+### places Collection 예시
+
+```json
+{
+  "name": "샘플 반려견 동반 카페",
+  "category": "cafe",
+  "address": "서울특별시 서대문구",
+  "mapX": 126.93,
+  "mapY": 37.56,
+  "petSize": ["S", "M"],
+  "indoorAllowed": true,
+  "leashRequired": true,
+  "isFierceDogAllowed": false,
+  "sourceUrl": "https://example.com",
+  "confidenceScore": 0.89,
+  "reviewStatus": "APPROVED",
+  "updatedAt": "2026-06-01"
+}
+```
+
+---
+
+## 🔗 사용한 오픈소스 및 외부 API
+
+| 이름 | 사용 목적 |
+|---|---|
+| Flutter | 모바일 앱 UI 및 클라이언트 개발 |
+| Dart | Flutter 앱 개발 언어 |
+| Firebase Authentication | 사용자 로그인 및 인증 관리 |
+| Cloud Firestore | 사용자, 반려동물, 장소 데이터 저장 |
+| Google Maps API | 지도 표시 및 장소 위치 시각화 |
+| Google Geocoding API | 주소와 좌표 변환 |
+| OpenAI GPT-4o-mini API | 자연어 질의를 구조화된 JSON 필터로 변환 |
+| 한국관광공사 TourAPI 4.0 | 기초 관광지 및 장소 데이터 수집 |
+| Python | 데이터 수집 및 정제 파이프라인 구현 |
+| BeautifulSoup | 웹 페이지 내 반려동물 동반 정책 정보 추출 |
+| Naver Search API | 블로그 및 웹 문서 기반 장소 정보 탐색 |
 
 ```
 
