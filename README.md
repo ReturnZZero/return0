@@ -425,19 +425,31 @@ pet-policy-crawler/sample_data/sample_places.json
 
 ```json
 {
-  "name": "샘플 반려견 동반 카페",
-  "category": "cafe",
-  "address": "서울특별시 서대문구",
-  "mapX": 126.93,
-  "mapY": 37.56,
-  "petSize": ["S", "M"],
+  "contentId": "00000031",
+  "title": "보틀라운지",
+  "addr1": "서울 서대문구 홍연길 26 1층",
+  "tel": "070-5147-8332",
+  "firstimage": "https://firebasestorage.googleapis.com/v0/b/mypettrip-6bf55.firebasestorage.app/o/%E1%84%87%E1%85%A9%E1%84%90%E1%85%B3%E1%86%AF%E1%84%85%E1%85%A1%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%8C%E1%85%B5.jpeg?alt=media&token=9ffe4224-4e7d-4d7a-bc8f-b851384e6285",
+  "updateDate": "20260507",
+  "addr2": "",
+  "mapX": 126.928474475085,
+  "mapY": 37.575182819531,
+  "lclsSystm1": "FD",
+  "placeType": "FD",
+  "seedRegionSidoCode": "11",
+  "seedRegionSidoName": "서울특별시",
+  "seedRegionSigunguCode": "410",
+  "seedRegionSigunguName": "서대문구",
+  "overview": "",
+  "homepage": "",
+  "reviewCount": 0,
+  "isFierceDog": false,
   "indoorAllowed": true,
-  "leashRequired": true,
-  "isFierceDogAllowed": false,
-  "sourceUrl": "https://example.com",
-  "confidenceScore": 0.89,
-  "reviewStatus": "APPROVED",
-  "updatedAt": "2026-06-01"
+  "outdoorOnly": false,
+  "parkingAvailable": false,
+  "leashRequired": false,
+  "petSize": "L",
+  "travelChecklist": []
 }
 ```
 
@@ -465,6 +477,8 @@ pet-policy-crawler/sample_data/sample_places.json
 
 ## 📄 Poster Session
 ![Poster](https://github.com/ReturnZZero/return0/blob/main/docs/%E1%84%8C%E1%85%A9%E1%86%AF%E1%84%91%E1%85%B3%20%E1%84%91%E1%85%A9%E1%84%89%E1%85%B3%E1%84%90%E1%85%A5%E1%84%89%E1%85%A6%E1%84%89%E1%85%A7%E1%86%AB.png)
+
+---
 
 ## 📎 관련 문서 (Documents)
 
