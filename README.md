@@ -471,8 +471,6 @@ pet-policy-crawler/sample_data/sample_places.json
 | BeautifulSoup | 웹 페이지 내 반려동물 동반 정책 정보 추출 |
 | Naver Search API | 블로그 및 웹 문서 기반 장소 정보 탐색 |
 
-```
-
 ---
 
 ## 📄 Poster Session
